@@ -1,11 +1,8 @@
 package com.kiwi.finanzas.ui.views
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.app.DatePickerDialog
 import android.widget.DatePicker
-import android.widget.ImageButton
-import android.widget.Space
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -28,8 +24,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,27 +46,17 @@ import com.kiwi.finanzas.db.EntradaDAO
 import com.kiwi.finanzas.db.TipoDAO
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.MenuItemColors
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.modifier.modifierLocalMapOf
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -82,14 +66,10 @@ import com.kiwi.finanzas.db.Tipo
 import com.kiwi.finanzas.ui.theme.myBlue
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
-import com.kiwi.finanzas.ui.theme.myYellow
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.time.LocalDateTime
-import java.util.Calendar
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.max
+import java.time.Month
 
 fun getValidatedNumber(text: String): String {
     // Start by filtering out unwanted characters like commas and multiple decimals
@@ -140,18 +120,26 @@ fun prev(){*/
     var entradaEdit: Entrada? by remember { mutableStateOf(null) }
     val coroutineScope = rememberCoroutineScope()
     val periodo by remember { mutableStateOf(if(getPreference(context,"periodo") >= 0f) getPreference(context,"periodo") else 1f) }
-    val gastosPeriodo by if(periodo == 1f) {
-        daoEntradas.getGastoPeriodoDia(
-            ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31) + currentTime.dayOfMonth
-        ).collectAsState(initial = emptyList())
-    }else{
-        if(periodo == 2f){
+    val gastosPeriodo by when(periodo){
+        1f -> {
+            daoEntradas.getGastoPeriodoDia(
+                ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31) + currentTime.dayOfMonth
+            ).collectAsState(initial = emptyList())
+        }
+        2f -> {
             val timePeriod = currentTime.minusDays(currentTime.dayOfWeek.value - 1L)
             daoEntradas.getGastoPeriodoSemana(
                 ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
             ).collectAsState(initial = emptyList())
-        } else {
+        }
+        3f -> {
             val timePeriod = currentTime.minusDays((currentTime.dayOfWeek.value - 1L)+7L)
+            daoEntradas.getGastoPeriodoQuincena(
+                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
+            ).collectAsState(initial = emptyList())
+        }
+        else -> {
+            val timePeriod = currentTime.minusDays((currentTime.dayOfMonth.toLong()))
             daoEntradas.getGastoPeriodoQuincena(
                 ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
             ).collectAsState(initial = emptyList())
@@ -295,7 +283,8 @@ fun prev(){*/
             val gastoMax = when(periodo){
                 1f -> {getPreference(context, "maxDia")/(currentTime.month.length(isLeapYear(currentTime.year)))} // Dias
                 2f -> {getPreference(context, "maxDia")/((currentTime.month.length(isLeapYear(currentTime.year)))/7f)} // Semanas
-                else -> {getPreference(context, "maxDia")/((currentTime.month.length(isLeapYear(currentTime.year)))/15f)}// Quincena
+                3f -> {getPreference(context, "maxDia")/((currentTime.month.length(isLeapYear(currentTime.year)))/15f)}// Quincena
+                else -> {getPreference(context, "maxDia")}
             }
             val total2 = gastosPeriodo.sumOf { it.cantidad }
             val totalDegree = (total2 / gastoMax) * -360f

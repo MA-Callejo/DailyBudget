@@ -214,6 +214,13 @@ fun Settings(daoTipos: TipoDAO, context: Context) {
                             savePreference(context, "periodo", periodo)
                         }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Mensual") },
+                        onClick = {
+                            periodo = 4f
+                            savePreference(context, "periodo", periodo)
+                        }
+                    )
                 }
                 Text(
                     textAlign = TextAlign.Center,
@@ -229,7 +236,8 @@ fun Settings(daoTipos: TipoDAO, context: Context) {
                         text = when (periodo) {
                             1f -> "Diario"
                             2f -> "Semanal"
-                            else -> "Quincenal"
+                            3f -> "Quincenal"
+                            else -> "Mensual"
                         },
                         style = TextStyle(fontSize = 24.sp),
                         textAlign = TextAlign.Center,
