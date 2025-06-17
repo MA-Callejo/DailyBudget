@@ -12,6 +12,9 @@ interface EntradaDAO {
     @Query("SELECT * FROM entradas")
     fun getAll(): Flow<List<Entrada>>
 
+    @Query("SELECT * FROM entradas where mes = :mes and anno = :anno order by dia desc, hora desc, min desc LIMIT :limit OFFSET :skip")
+    suspend fun getMesHome(mes: Int, anno: Int, limit: Int, skip: Int): List<Entrada>
+
     @Insert
     suspend fun insert(entrada: Entrada)
 

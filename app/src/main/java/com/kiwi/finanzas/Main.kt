@@ -7,19 +7,44 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemColors
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.BlendMode.Companion.Screen
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.createGraph
 import com.kiwi.finanzas.db.DataBase
+import com.kiwi.finanzas.ui.NavigationItem
 import com.kiwi.finanzas.ui.theme.FinanzasTheme
 import com.kiwi.finanzas.ui.views.Historico
 import com.kiwi.finanzas.ui.views.Home
 import com.kiwi.finanzas.ui.views.Settings
+import java.time.LocalDateTime
 
 class Main : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -41,15 +66,82 @@ fun Greeting(context: Context) {
     val daoEntradas = database.entryDao()
     val daoTipos = database.typeDao()
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "home") {
-        composable("home") { Home(navController, daoEntradas, daoTipos, context) }
-        //composable("historico") { Historico(daoEntradas, daoTipos, context) }
-        composable("settings") { Settings(daoTipos, context) }
-        composable("historico/{anno}/{mes}/{dia}") { backStackEntry ->
-            val anno = backStackEntry.arguments?.getString("anno")?.toIntOrNull()
-            val mes = backStackEntry.arguments?.getString("mes")?.toIntOrNull()
-            val dia = backStackEntry.arguments?.getString("dia")?.toIntOrNull()
-            Historico(navController, anno, mes, dia, daoEntradas, daoTipos, context)
+    val currentTime = LocalDateTime.now()
+    val navigationItems = listOf(
+        NavigationItem(
+            title = "Home",
+            icon = Icons.Default.Home,
+            route = "home"
+        ),
+        NavigationItem(
+            title = "Setting",
+            icon = Icons.Default.Settings,
+            route = "settings"
+        ),
+        NavigationItem(
+            title = "Historic",
+            icon = Icons.Default.DateRange,
+            route = "historico/"+currentTime.year.toString()+"/"+currentTime.monthValue.toString()+"/ "
+        )
+    )
+    val selectedNavigationIndex = rememberSaveable {
+        mutableIntStateOf(0)
+    }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color.DarkGray
+            ) {
+                navigationItems.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        selected = selectedNavigationIndex.intValue == index,
+                        onClick = {
+                            selectedNavigationIndex.intValue = index
+                        },
+                        icon = {
+                            Icon(imageVector = item.icon, contentDescription = item.title)
+                        },
+                        label = {
+                            Text(
+                                item.title,
+                                color = if (index == selectedNavigationIndex.intValue)
+                                    Color.White
+                                else Color.Gray
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.surface,
+                            indicatorColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        val graph =
+            navController.createGraph(startDestination = "historico/"+currentTime.year.toString()+"/"+currentTime.monthValue.toString()+"/ ") {
+                composable("historico/{anno}/{mes}/{dia}") { backStackEntry ->
+                    val anno = backStackEntry.arguments?.getString("anno")?.toIntOrNull()
+                    val mes = backStackEntry.arguments?.getString("mes")?.toIntOrNull()
+                    val dia = backStackEntry.arguments?.getString("dia")?.toIntOrNull()
+                    Historico(navController, anno, mes, dia, daoEntradas, daoTipos, context)
+                }
+            }
+        when(selectedNavigationIndex.intValue){
+            1 -> {
+                Settings(daoTipos, context, Modifier.padding(innerPadding))
+            }
+            2 -> {
+                NavHost(
+                    navController = navController,
+                    graph = graph,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+            else -> {
+                Home(daoEntradas, daoTipos, context, Modifier.padding(innerPadding))
+            }
         }
     }
 }

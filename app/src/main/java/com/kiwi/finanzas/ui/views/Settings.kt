@@ -33,11 +33,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -49,6 +51,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -108,192 +111,217 @@ fun getPreference(context: Context, key: String): Float {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Settings(daoTipos: TipoDAO, context: Context) {
-    val tipos by daoTipos.getAll().collectAsState(initial = emptyList())
+fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
+    val tiposNull by daoTipos.getAll().collectAsState(initial = null)
     var text by remember { mutableStateOf(getPreference(context, "maxDia").toString()) }
     var tipoSelected: Tipo? by remember { mutableStateOf(null) }
     var selector by remember { mutableStateOf(false) }
     var completos by remember { mutableStateOf(false) }
     var expandedDay by remember { mutableStateOf(false)}
-    var periodo by remember { mutableStateOf(if(getPreference(context,"periodo") >= 0f) getPreference(context,"periodo") else 1f) }
+    var periodo by remember { mutableFloatStateOf(if(getPreference(context,"periodo") >= 0f) getPreference(context,"periodo") else 1f) }
     val coroutineScope = rememberCoroutineScope()
-    if(selector){
-        CustomDialog(tipo = tipoSelected, onDismis = {selector = false},
-            onOk = {
-                tipo -> selector = false
-                if(tipoSelected == null){
-                    coroutineScope.launch {
-                        daoTipos.insert(tipo)
-                    }
-                }else{
-                    coroutineScope.launch {
-                        daoTipos.update(tipo)
-                    }
-                }
-            },
-            onRestore = {id ->
-                coroutineScope.launch {
-                    daoTipos.restore(id)
+    if(tiposNull != null) {
+        val tipos = tiposNull!!
+        if (selector) {
+            CustomDialog(
+                tipo = tipoSelected, onDismis = { selector = false },
+                onOk = { tipo ->
                     selector = false
-                }
-            },
-            onDelete = {id ->
-                coroutineScope.launch {
-                    daoTipos.delete(id)
-                    selector = false
-                }
-            })
-    }
-    Column(modifier = Modifier.blur(if (selector) 16.dp else 0.dp)) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(20.dp, 50.dp, 20.dp, 20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    textAlign = TextAlign.Center,
-                    style = TextStyle(fontSize = 24.sp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    text = "Gasto mensual",
-                    color = Color.White
-                )
-                OutlinedTextField(
-                    modifier = Modifier.width(100.dp),
-                    textStyle = TextStyle(fontSize = 24.sp),
-                    value = text,
-                    onValueChange = {
-                        val valor = getValidatedNumber(it)
-                        val valorNum = if (valor == "") 0f else valor.toFloat()
-                        text = valorNum.toString()
-                        savePreference(context, "maxDia", valorNum)
-                    },
-                    placeholder = {
-                        Text(
-                            text = "Valor",
-                            modifier = Modifier.width(100.dp),
-                            style = TextStyle(fontSize = 24.sp)
-                        )
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    maxLines = 1,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                )
-                Text(
-                    text = "€",
-                    color = Color.White,
-                    style = TextStyle(fontSize = 24.sp),
-                    modifier = Modifier.padding(5.dp, 0.dp, 20.dp, 0.dp)
-                )
-            }
-            Row(modifier = Modifier.padding(0.dp, 40.dp, 0.dp, 0.dp), verticalAlignment = Alignment.CenterVertically) {
-                DropdownMenu(expanded = expandedDay,
-                    onDismissRequest = { expandedDay = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Diario") },
-                        onClick = {
-                            periodo = 1f
-                            savePreference(context, "periodo", periodo)
+                    if (tipoSelected == null) {
+                        coroutineScope.launch {
+                            daoTipos.insert(tipo)
                         }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Semanal") },
-                        onClick = {
-                            periodo = 2f
-                            savePreference(context, "periodo", periodo)
+                    } else {
+                        coroutineScope.launch {
+                            daoTipos.update(tipo)
                         }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Quincenal") },
-                        onClick = {
-                            periodo = 3f
-                            savePreference(context, "periodo", periodo)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Mensual") },
-                        onClick = {
-                            periodo = 4f
-                            savePreference(context, "periodo", periodo)
-                        }
-                    )
-                }
-                Text(
-                    textAlign = TextAlign.Center,
-                    style = TextStyle(fontSize = 24.sp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    text = "Periodo de gestión: ",
-                    color = Color.White
-                )
-                TextButton(onClick = { expandedDay=true }) {
-                    Text(
-                        text = when (periodo) {
-                            1f -> "Diario"
-                            2f -> "Semanal"
-                            3f -> "Quincenal"
-                            else -> "Mensual"
-                        },
-                        style = TextStyle(fontSize = 24.sp),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f))
-                Text(
-                    text = "Mostrar eliminados",
-                    color = Color.White,
-                    modifier = Modifier.padding(5.dp, 0.dp)
-                )
-                Switch(checked = completos, onCheckedChange = {
-                    completos = it
+                    }
+                },
+                onRestore = { id ->
+                    coroutineScope.launch {
+                        daoTipos.restore(id)
+                        selector = false
+                    }
+                },
+                onDelete = { id ->
+                    coroutineScope.launch {
+                        daoTipos.delete(id)
+                        selector = false
+                    }
                 })
-            }
-            OutlinedCard(
+        }
+        Column(modifier = modifier.blur(if (selector) 16.dp else 0.dp)) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(0.dp, 20.dp),
+                    .padding(20.dp, 50.dp, 20.dp, 20.dp)
             ) {
-                LazyColumn {
-                    items(tipos.filter { t -> t.disponible == 1 || completos }) {
-                        OutlinedCard(
-                            onClick = {
-                                selector = true
-                                tipoSelected = it
-                            },
-                            colors = CardDefaults.outlinedCardColors(containerColor = it.color()),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                        ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(fontSize = 24.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        text = "Gasto mensual",
+                        color = Color.White
+                    )
+                    OutlinedTextField(
+                        modifier = Modifier.width(100.dp),
+                        textStyle = TextStyle(fontSize = 24.sp),
+                        value = text,
+                        onValueChange = {
+                            val valor = getValidatedNumber(it)
+                            val valorNum = if (valor == "") 0f else valor.toFloat()
+                            text = valorNum.toString()
+                            savePreference(context, "maxDia", valorNum)
+                        },
+                        placeholder = {
                             Text(
-                                text = it.nombre,
-                                color = it.textColor(),
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .fillMaxWidth(), textAlign = TextAlign.Center
+                                text = "Valor",
+                                modifier = Modifier.width(100.dp),
+                                style = TextStyle(fontSize = 24.sp)
+                            )
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        maxLines = 1,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                    )
+                    Text(
+                        text = "€",
+                        color = Color.White,
+                        style = TextStyle(fontSize = 24.sp),
+                        modifier = Modifier.padding(5.dp, 0.dp, 20.dp, 0.dp)
+                    )
+                }
+                Row(
+                    modifier = Modifier.padding(0.dp, 40.dp, 0.dp, 0.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(fontSize = 24.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        text = "Periodo de gestión: ",
+                        color = Color.White
+                    )
+                    Column {
+                        DropdownMenu(
+                            expanded = expandedDay,
+                            onDismissRequest = { expandedDay = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Diario") },
+                                onClick = {
+                                    periodo = 1f
+                                    savePreference(context, "periodo", periodo)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Semanal") },
+                                onClick = {
+                                    periodo = 2f
+                                    savePreference(context, "periodo", periodo)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Quincenal") },
+                                onClick = {
+                                    periodo = 3f
+                                    savePreference(context, "periodo", periodo)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Mensual") },
+                                onClick = {
+                                    periodo = 4f
+                                    savePreference(context, "periodo", periodo)
+                                }
+                            )
+                        }
+                        TextButton(onClick = { expandedDay = true }) {
+                            Text(
+                                text = when (periodo) {
+                                    1f -> "Diario"
+                                    2f -> "Semanal"
+                                    3f -> "Quincenal"
+                                    else -> "Mensual"
+                                },
+                                style = TextStyle(fontSize = 24.sp),
+                                textAlign = TextAlign.Center,
                             )
                         }
                     }
                 }
-                IconButton(modifier = Modifier.fillMaxWidth(), onClick = {
-                    tipoSelected = null
-                    selector = true
-                }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_input_add),
-                        contentDescription = ""
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
                     )
+                    Text(
+                        text = "Mostrar eliminados",
+                        color = Color.White,
+                        modifier = Modifier.padding(5.dp, 0.dp)
+                    )
+                    Switch(checked = completos, onCheckedChange = {
+                        completos = it
+                    })
+                }
+                OutlinedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp, 20.dp),
+                ) {
+                    LazyColumn {
+                        items(tipos.filter { t -> t.disponible == 1 || completos }) {
+                            OutlinedCard(
+                                onClick = {
+                                    selector = true
+                                    tipoSelected = it
+                                },
+                                colors = CardDefaults.outlinedCardColors(containerColor = it.color()),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                            ) {
+                                Text(
+                                    text = it.nombre,
+                                    color = it.textColor(),
+                                    modifier = Modifier
+                                        .padding(10.dp)
+                                        .fillMaxWidth(), textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                    IconButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        tipoSelected = null
+                        selector = true
+                    }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_input_add),
+                            contentDescription = ""
+                        )
+                    }
                 }
             }
+        }
+    }
+    else{
+        Box(modifier = modifier.fillMaxSize()) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .width(64.dp)
+                    .align(Alignment.Center),
+                color = MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
         }
     }
 }

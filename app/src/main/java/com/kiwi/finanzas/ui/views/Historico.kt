@@ -367,16 +367,6 @@ fun Historico(navController: NavController, anno: Int?, mes: Int?, dia: Int?, da
                         tint = Color.White
                     )
                 }
-                IconButton(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(10.dp), onClick = { navController.navigate("home") }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.casa),
-                        contentDescription = "",
-                        tint = Color.White
-                    )
-                }
             }
         }
     }
