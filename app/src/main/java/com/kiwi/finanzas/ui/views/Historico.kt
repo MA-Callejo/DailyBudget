@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,19 +25,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -68,6 +75,7 @@ import com.kiwi.finanzas.db.Agrupado
 import com.kiwi.finanzas.db.Entrada
 import com.kiwi.finanzas.db.EntradaDAO
 import com.kiwi.finanzas.db.TipoDAO
+import com.kiwi.finanzas.getPreference
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
 import kotlinx.coroutines.launch
@@ -75,9 +83,135 @@ import java.text.DecimalFormat
 import java.time.LocalDateTime
 import kotlin.math.max
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
-fun Historico(navController: NavController, anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, changeFechas: (anno: Int, mes: Int, dia: Int) -> Unit) {
+fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, changeFechas: (anno: Int?, mes: Int?, dia: Int?) -> Unit, modifier: Modifier) {
+    val tipos by daoTipos.getAll().collectAsState(initial = null)
+    var showDetalles by remember { mutableStateOf(false) }
+    var showEdit by remember { mutableStateOf(false) }
+    var annoAct by remember { mutableStateOf(anno) }
+    var mesAct by remember { mutableStateOf(mes) }
+    var diaAct by remember { mutableStateOf(dia) }
+    var total by remember { mutableStateOf(0f) }
+    var entradas by remember { mutableStateOf<List<Entrada>?>(null) }
+    var agrupados by remember { mutableStateOf<List<Pair<Int, List<Agrupado>>>?>(null) }
+
+    fun obtenerAgrupados(){
+
+    }
+    fun obtenerDia(){
+
+    }
+    suspend fun obtenerDatos(){
+        if(diaAct != null){
+            entradas = null
+            obtenerAgrupados()
+        }else{
+            agrupados = null
+            obtenerDia()
+        }
+    }
+
+    fun changeFecha(anno: Int?, mes: Int?, dia: Int?){
+        changeFechas(anno, mes, dia)
+        annoAct = anno
+        mesAct = mes
+        diaAct = dia
+    }
+
+    if(tipos != null){
+        Scaffold(modifier = modifier, topBar = {
+            Row(){
+                if(annoAct != null) {
+                    IconButton(onClick = {
+                        if (mesAct == null) {
+                            changeFecha(null, null, null)
+                        }else {
+                            if (diaAct == null) {
+                                changeFecha(anno, null, null)
+                            } else {
+                                changeFecha(anno, mes, null)
+                            }
+                        }
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "",
+                            tint = Color.White
+                        )
+                    }
+                }
+                Column() {
+                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/$mesAct${if (diaAct != null) "/$diaAct" else ""}" else ""}" else "TODOS")
+                    Text("$total€")
+                }
+            }
+        }) { paddingValues ->
+            Column(modifier = Modifier
+                .blur(if (showDetalles || showEdit) 16.dp else 0.dp)
+                .padding(paddingValues)) {
+
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(gastos) { it ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp, 3.dp),
+                            onClick = {
+
+                            }
+                        ) {
+                            Text(
+                                text = it.concepto,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp, 5.dp),
+                                style = TextStyle(
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = tipos.first { t -> t.id == it.tipo }.textColor(),
+                            )
+                            Row {
+                                Text(
+                                    text = DecimalFormat("0.00€").format(it.cantidad),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .padding(10.dp, 5.dp),
+                                    style = TextStyle(
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = if (it.cantidad > 0) myRed else myGreen
+                                )
+                                Text(
+                                    text = "${it.dia}-${it.mes}-${it.anno}",
+                                    modifier = Modifier.padding(2.dp),
+                                    color = tipos.first { t -> t.id == it.tipo }.textColor(),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }else{
+        Box(modifier = modifier.fillMaxSize()) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .width(64.dp)
+                    .align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+    }
+}
+
+
+@Composable
+fun HistoricoOld(navController: NavController, anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, changeFechas: (anno: Int, mes: Int, dia: Int) -> Unit) {
     val tipos by daoTipos.getAll().collectAsState(initial = emptyList())
     var showEdit by remember { mutableStateOf(false) }
     var detallesShow by remember { mutableStateOf(false) }
@@ -372,7 +506,6 @@ fun Historico(navController: NavController, anno: Int?, mes: Int?, dia: Int?, da
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: (estado: Boolean)-> Unit, daoEntradas: EntradaDAO, maxDia: Float, onEnter: (valor: Int) -> Unit){
     val currentTime = LocalDateTime.now()
@@ -393,7 +526,8 @@ fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: (estad
     }
     OutlinedCard(onClick = {onEnter(if(tipo == 1) anno!! else if (tipo == 2) mes!! else dia!!)}, border = BorderStroke(2.dp, if(resultado >= 0) myGreen else myRed)) {
         Column(modifier = Modifier
-            .padding(10.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
+            .padding(10.dp)
+            .fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
             Canvas(
                 modifier = Modifier
                     .width(100.dp)

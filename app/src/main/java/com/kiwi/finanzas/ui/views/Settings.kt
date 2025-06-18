@@ -86,6 +86,11 @@ import androidx.navigation.NavHostController
 import com.kiwi.finanzas.db.Entrada
 import com.kiwi.finanzas.db.Tipo
 import com.kiwi.finanzas.db.TipoDAO
+import com.kiwi.finanzas.getPreference
+import com.kiwi.finanzas.getValidatedNumber
+import com.kiwi.finanzas.hsvToColor
+import com.kiwi.finanzas.savePreference
+import com.kiwi.finanzas.toHSV
 import com.kiwi.finanzas.ui.theme.myBlue
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
@@ -97,19 +102,7 @@ import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-fun savePreference(context: Context, key: String, value: Float) {
-    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
-    val editor: SharedPreferences.Editor = sharedPreferences.edit()
-    editor.putFloat(key, value)
-    editor.apply()
-}
 
-fun getPreference(context: Context, key: String): Float {
-    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
-    return sharedPreferences.getFloat(key, 1000f)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
     val tiposNull by daoTipos.getAll().collectAsState(initial = null)
@@ -326,29 +319,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
     }
 }
 
-@Composable
-fun ColorSlider(label: String, value: Float, onValueChange: (Float) -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = label)
-        Slider(
-            value = value,
-            onValueChange = { newValue ->
-                onValueChange(newValue)
-            },
-            valueRange = 0f..1f,
-            colors = SliderDefaults.colors(
-                thumbColor = Color.Gray,
-                activeTrackColor = Color.Gray
-            )
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview
 @Composable
 fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tipo) -> Unit = {}, onRestore: (id: Int) -> Unit = {}, onDelete: (id: Int) -> Unit = {}) {
     var nombre by remember { mutableStateOf(tipo?.nombre ?: "") }
@@ -435,27 +406,6 @@ fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tip
     )
 }
 
-data class HSVColor(val hue: Float, val saturation: Float, val value: Float)
-fun Color.toHSV(): HSVColor {
-    val maxColorComponent = maxOf(red, green, blue)
-    val minColorComponent = minOf(red, green, blue)
-    val delta = maxColorComponent - minColorComponent
-
-    val hue = when {
-        delta == 0f -> 0f
-        maxColorComponent == red -> (60 * (((green - blue) / delta) + 6)) % 360
-        maxColorComponent == green -> (60 * (((blue - red) / delta) + 2)) % 360
-        else -> (60 * (((red - green) / delta) + 4)) % 360
-    }
-
-    val saturation = if (maxColorComponent != 0f) delta / maxColorComponent else 0f
-
-    val value = maxColorComponent
-
-    return HSVColor(hue, saturation, value)
-}
-
-
 @Composable
 fun ColorPicker(
     modifier: Modifier = Modifier,
@@ -493,7 +443,6 @@ fun ColorPicker(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun HueSlider(
     hue: Float,
@@ -543,7 +492,6 @@ fun HueSlider(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ColorSelectionBox(
     hue: Float,
@@ -608,117 +556,5 @@ fun ColorSelectionBox(
         drawArc(Color.Black, 0f, 360f, true, Offset(posX-24f, posY-24f), Size(48f, 48f))
         drawArc(Color.White, 0f, 360f, true, Offset(posX-22f, posY-22f), Size(44f, 44f))
         drawArc(selectedColor, 0f, 360f, true, Offset(posX-20f, posY-20f), Size(40f, 40f))
-    }
-}
-
-fun hsvToColor(hue: Float, saturation: Float, value: Float): Color {
-    val c = value * saturation
-    val x = c * (1 - kotlin.math.abs((hue / 60f) % 2 - 1))
-    val m = value - c
-
-    val (r, g, b) = when {
-        hue < 60 -> Triple(c, x, 0f)
-        hue < 120 -> Triple(x, c, 0f)
-        hue < 180 -> Triple(0f, c, x)
-        hue < 240 -> Triple(0f, x, c)
-        hue < 300 -> Triple(x, 0f, c)
-        else -> Triple(c, 0f, x)
-    }
-
-    return Color(
-        red = ((r + m) * 255).roundToInt(),
-        green = ((g + m) * 255).roundToInt(),
-        blue = ((b + m) * 255).roundToInt()
-    )
-}
-
-@Composable
-@Preview
-fun vista(){
-    Column(modifier = Modifier.blur(if (false) 16.dp else 0.dp)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp, 50.dp, 20.dp, 20.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    textAlign = TextAlign.Center,
-                    style = TextStyle(fontSize = 24.sp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    text = "Gasto mensual",
-                    color = Color.White
-                )
-                OutlinedTextField(
-                    modifier = Modifier.width(100.dp),
-                    textStyle = TextStyle(fontSize = 24.sp),
-                    value = "text",
-                    onValueChange = {
-
-                    },
-                    placeholder = {
-                        Text(
-                            text = "Valor",
-                            modifier = Modifier.width(100.dp),
-                            style = TextStyle(fontSize = 24.sp)
-                        )
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    maxLines = 1,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                )
-                Text(
-                    text = "€",
-                    color = Color.White,
-                    style = TextStyle(fontSize = 24.sp),
-                    modifier = Modifier.padding(5.dp, 0.dp, 20.dp, 0.dp)
-                )
-            }
-            Row(modifier = Modifier.padding(0.dp, 40.dp, 0.dp, 0.dp), verticalAlignment = Alignment.CenterVertically) {
-                DropdownMenu(expanded = false,
-                    onDismissRequest = {  }) {
-                    DropdownMenuItem(
-                        text = { Text("Diario") },
-                        onClick = {
-
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Semanal") },
-                        onClick = {
-
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Quincenal") },
-                        onClick = {
-
-                        }
-                    )
-                }
-                Text(
-                    textAlign = TextAlign.Center,
-                    style = TextStyle(fontSize = 24.sp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    text = "Periodo de gestión:",
-                    color = Color.White
-                )
-                TextButton(onClick = {  }) {
-                    Text(
-                        text = "Diario",
-                        style = TextStyle(fontSize = 24.sp),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
     }
 }

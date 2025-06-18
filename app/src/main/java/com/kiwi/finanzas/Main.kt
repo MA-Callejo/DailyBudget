@@ -124,26 +124,18 @@ fun Greeting(context: Context) {
     ) { innerPadding ->
         when(selectedNavigationIndex.intValue){
             1 -> {
-                Settings(daoTipos, context, Modifier.padding(innerPadding))
-            }
-            2 -> {
-                Historico(navController, anno, mes, dia, daoEntradas, daoTipos, context, {annoNew, mesNew, diaNew ->
+                Historico(anno, mes, dia, daoEntradas, daoTipos, context, {annoNew, mesNew, diaNew ->
                     anno = annoNew
                     mes = mesNew
                     dia = diaNew
-                })
+                }, Modifier.padding(innerPadding))
+            }
+            2 -> {
+                Settings(daoTipos, context, Modifier.padding(innerPadding))
             }
             else -> {
                 Home(daoEntradas, daoTipos, context, Modifier.padding(innerPadding))
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FinanzasTheme {
-        //Greeting("Android")
     }
 }

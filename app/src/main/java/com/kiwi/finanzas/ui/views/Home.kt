@@ -76,6 +76,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.kiwi.finanzas.db.Agrupado
 import com.kiwi.finanzas.db.Tipo
+import com.kiwi.finanzas.getPreference
+import com.kiwi.finanzas.getValidatedNumber
+import com.kiwi.finanzas.isLeapYear
 import com.kiwi.finanzas.ui.theme.myBlue
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
@@ -84,146 +87,6 @@ import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.time.LocalDateTime
 import java.time.Month
-
-fun getValidatedNumber(text: String): String {
-    // Start by filtering out unwanted characters like commas and multiple decimals
-    val textSinComa = text.replace(",", ".")
-    val filteredChars = textSinComa.filterIndexed { index, c ->
-        c in "0123456789" ||                      // Take all digits
-                (c == '.' && textSinComa.indexOf('.') == index) ||
-                (c == '-' && index == 0)// Take only the first decimal
-    }
-    // Now we need to remove extra digits from the input
-    return if(filteredChars.contains('.')) {
-        val beforeDecimal = filteredChars.substringBefore('.')
-        val afterDecimal = filteredChars.substringAfter('.')
-        beforeDecimal + "." + afterDecimal.take(2)    // If decimal is present, take first 3 digits before decimal and first 2 digits after decimal
-    } else {
-        filteredChars                     // If there is no decimal, just take the first 3 digits
-    }
-}
-
-fun isLeapYear(year: Int): Boolean {
-    return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun panelAdd(tipos: List<Tipo>, coroutineScope: CoroutineScope, daoEntradas: EntradaDAO, onDismis: () -> Unit = {}){
-
-    var text by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("Tipo") }
-    var tipoColor by remember { mutableStateOf(Color.Gray) }
-    var textColor by remember { mutableStateOf(Color.White) }
-    var tipoId by remember { mutableIntStateOf(0) }
-    var expanded by remember { mutableStateOf(false) }
-    AlertDialog(content = {
-        OutlinedCard {
-            Column(modifier = Modifier.padding(5.dp)) {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = text,
-                    onValueChange = {
-                        text = it
-                    },
-                    placeholder = {
-                        Text(
-                            text = "Concepto",
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                    maxLines = 1,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Next,
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                )
-                Row(
-                    modifier = Modifier.padding(0.dp, 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DropdownMenu(expanded = expanded,
-                        onDismissRequest = { expanded = false }) {
-                        tipos.filter { t -> t.disponible == 1 }.forEach {
-                            DropdownMenuItem(
-                                text = { Text(it.nombre, color = it.textColor()) },
-                                onClick = {
-                                    expanded = false
-                                    tipo = it.nombre
-                                    tipoId = it.id
-                                    tipoColor = it.color()
-                                },
-                                modifier = Modifier.background(it.color())
-                            )
-                        }
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1F),
-                        colors = ButtonDefaults.buttonColors(containerColor = tipoColor),
-                        onClick = { expanded = true }) {
-                        Text(text = tipo, color = textColor)
-                    }
-                    Spacer(modifier = Modifier.width(5.dp))
-                    OutlinedTextField(
-                        modifier = Modifier.weight(0.6F),
-                        value = amount,
-                        onValueChange = {
-                            val valor = getValidatedNumber(it)
-                            val valorNum = if (valor == "") 0f else valor.toFloat()
-                            amount = valorNum.toString()
-                        },
-                        placeholder = {
-                            Text(
-                                text = "Precio"
-                            )
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        maxLines = 1,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
-                    )
-                }
-                IconButton(modifier = Modifier.fillMaxWidth(), onClick = {
-                    if (tipoId != 0 && amount != "" && text != "") {
-                        coroutineScope.launch {
-                            val current = LocalDateTime.now()
-                            daoEntradas.insert(
-                                Entrada(
-                                    concepto = text,
-                                    anno = current.year,
-                                    mes = current.monthValue,
-                                    dia = current.dayOfMonth,
-                                    hora = current.hour,
-                                    min = current.minute,
-                                    cantidad = amount.toDouble(),
-                                    tipo = tipoId
-                                )
-                            )
-                            text = ""
-                            amount = ""
-                            tipo = "Tipo"
-                            tipoId = 0
-                            tipoColor = Color.Gray
-                            onDismis()
-                        }
-                    }
-                }) {
-                    Icon(
-                        painter = painterResource(id = android.R.drawable.ic_input_add),
-                        contentDescription = ""
-                    )
-                }
-            }
-        }
-    }, onDismissRequest = { onDismis() })
-}
 
 @Composable
 fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier: Modifier) {
@@ -289,7 +152,37 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         val tipos = tiposNull!!
         val gastos = gastosNull!!
         val listState = rememberLazyListState()
-
+        var inicio = 90f
+        val total1 = agrupados.filter { it.total > 0 }.sumOf { it.total }
+        val total3 = gastos.sumOf { it.cantidad }
+        val gastoMax = when (periodo) {
+            1f -> {
+                getPreference(context, "maxDia") / (currentTime.month.length(
+                    isLeapYear(
+                        currentTime.year
+                    )
+                ))
+            }// Dias
+            2f -> {
+                getPreference(context, "maxDia") / ((currentTime.month.length(
+                    isLeapYear(
+                        currentTime.year
+                    )
+                )) / 7f)
+            }// Semanas
+            3f -> {
+                getPreference(context, "maxDia") / ((currentTime.month.length(
+                    isLeapYear(
+                        currentTime.year
+                    )
+                )) / 15f)
+            }// Quincena
+            else -> {
+                getPreference(context, "maxDia")
+            }
+        }
+        val total2 = gastosPeriodo.sumOf { it.cantidad }
+        val totalDegree = (total2 / gastoMax) * -360f
         // Detectar si el ítem de mayor índice (último en la lista) es visible
         val endReached by remember {
             derivedStateOf {
@@ -352,37 +245,6 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
             Column(modifier = Modifier
                 .fillMaxSize()
                 .padding(20.dp, 50.dp, 20.dp, 20.dp)) {
-                var inicio = 90f
-                val total1 = agrupados.filter { it.total > 0 }.sumOf { it.total }
-                val total3 = gastos.sumOf { it.cantidad }
-                val gastoMax = when (periodo) {
-                    1f -> {
-                        getPreference(context, "maxDia") / (currentTime.month.length(
-                            isLeapYear(
-                                currentTime.year
-                            )
-                        ))
-                    }// Dias
-                    2f -> {
-                        getPreference(context, "maxDia") / ((currentTime.month.length(
-                            isLeapYear(
-                                currentTime.year
-                            )
-                        )) / 7f)
-                    }// Semanas
-                    3f -> {
-                        getPreference(context, "maxDia") / ((currentTime.month.length(
-                            isLeapYear(
-                                currentTime.year
-                            )
-                        )) / 15f)
-                    }// Quincena
-                    else -> {
-                        getPreference(context, "maxDia")
-                    }
-                }
-                val total2 = gastosPeriodo.sumOf { it.cantidad }
-                val totalDegree = (total2 / gastoMax) * -360f
                 Row(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 0.dp)) {
                     if (agrupados.isNotEmpty()) {
                         Spacer(
@@ -540,7 +402,6 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview
 @Composable
 fun DialogDetalles(onDismis: () -> Unit = {}, agrupadosComp: List<Agrupado> = listOf()){
     val agrupados = agrupadosComp.filter { it.total > 0 }
@@ -748,142 +609,6 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                                     tipo = tipoId
                                 ))
                             }
-                        }
-                    }, colors = ButtonDefaults.buttonColors(containerColor = myBlue)) {
-                        Text("OK", color = Color.White)
-                    }
-                }
-            }
-        },
-        onDismissRequest = {onDismis()},
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DialogCreate(context: Context, onDismis: () -> Unit = {}, onCreate: (entrada: Entrada) -> Unit = {}, tipos: List<Tipo> = listOf()){
-    var text by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
-    var amount by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("Tipo") }
-    var tipoColor by remember { mutableStateOf(Color.Gray) }
-    var textColor by remember { mutableStateOf(Color.White) }
-    var tipoId by remember { mutableIntStateOf(0) }
-    val currentTime = LocalDateTime.now()
-    var year by remember { mutableIntStateOf(currentTime.year) }
-    var month by remember { mutableIntStateOf(currentTime.monthValue) }
-    var day by remember { mutableIntStateOf(currentTime.dayOfMonth) }
-
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
-            year = selectedYear
-            month = selectedMonth
-            day = selectedDay
-        }, year, month, day
-    )
-    AlertDialog(
-        content = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally){
-                OutlinedCard {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        OutlinedTextField(
-                            modifier = Modifier.fillMaxWidth(),
-                            value = text,
-                            onValueChange = {
-                                text = it
-                            },
-                            placeholder = {
-                                Text(
-                                    text = "Concepto",
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            maxLines = 1,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Next,
-                                capitalization = KeyboardCapitalization.Sentences
-                            ),
-                        )
-                        Row(
-                            modifier = Modifier.padding(0.dp, 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            DropdownMenu(expanded = expanded,
-                                onDismissRequest = { expanded = false }) {
-                                tipos.filter { t -> t.disponible == 1 }.forEach {
-                                    DropdownMenuItem(
-                                        text = { Text(it.nombre, color = it.textColor()) },
-                                        onClick = {
-                                            expanded = false
-                                            tipo = it.nombre
-                                            tipoId = it.id
-                                            tipoColor = it.color()
-                                            textColor = it.textColor()
-                                        },
-                                        modifier = Modifier.background(it.color())
-                                    )
-                                }
-                            }
-                            OutlinedButton(
-                                modifier = Modifier.weight(1F),
-                                colors = ButtonDefaults.buttonColors(containerColor = tipoColor),
-                                onClick = { expanded = true }) {
-                                Text(text = tipo, color = textColor)
-                            }
-                            Spacer(modifier = Modifier.width(5.dp))
-                            OutlinedTextField(
-                                modifier = Modifier.weight(0.6F),
-                                value = amount,
-                                onValueChange = {
-                                    val valor = getValidatedNumber(it)
-                                    val valorNum = if (valor == "") 0f else valor.toFloat()
-                                    amount = valorNum.toString()
-                                },
-                                placeholder = {
-                                    Text(
-                                        text = "Precio"
-                                    )
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                maxLines = 1,
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Number,
-                                    imeAction = ImeAction.Done
-                                ),
-                            )
-                        }
-                        Row {
-                            Spacer(modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f))
-                            TextButton(onClick = {
-                                datePickerDialog.show()
-                            }, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)) {
-                                Text("$day-${month + 1}-$year", color = Color.White)
-                            }
-                        }
-                    }
-                }
-                Row{
-                    TextButton(onClick = {
-                        if (tipoId != 0 && amount != "" && text != "") {
-                            onCreate(
-                                Entrada(
-                                    concepto = text,
-                                    anno = year,
-                                    mes = month + 1,
-                                    dia = day,
-                                    hora = currentTime.hour,
-                                    min = currentTime.minute,
-                                    cantidad = amount.toDouble(),
-                                    tipo = tipoId
-                                )
-                            )
                         }
                     }, colors = ButtonDefaults.buttonColors(containerColor = myBlue)) {
                         Text("OK", color = Color.White)
