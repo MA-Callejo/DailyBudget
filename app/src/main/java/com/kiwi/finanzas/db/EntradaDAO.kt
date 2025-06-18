@@ -28,7 +28,7 @@ interface EntradaDAO {
     fun getAllAnno(anno: Int): Flow<List<Entrada>>
 
     @Query("SELECT distinct(anno) FROM entradas order by anno desc")
-    fun getAnnos(): Flow<List<Int>>
+    suspend fun getAnnos(): List<Int>
 
     @Query("SELECT distinct(mes) FROM entradas where anno = :mes order by mes desc")
     fun getMeses(mes: Int): Flow<List<Int>>
@@ -48,14 +48,16 @@ interface EntradaDAO {
     fun getGastoPeriodoQuincena(dia: Int): Flow<List<Entrada>>
 
     @Query("SELECT * FROM entradas where mes = :mes and anno = :anno and dia = :dia")
-    fun getAllDia(mes: Int, dia: Int, anno: Int): Flow<List<Entrada>>
+    suspend fun getAllDia(mes: Int, dia: Int, anno: Int): List<Entrada>
 
     @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where mes = :mes and anno = :anno group by tipo order by total desc")
     fun getTotales(mes: Int, anno: Int): Flow<List<Agrupado>>
+    @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where mes = :mes and anno = :anno group by tipo order by total desc")
+    suspend fun getTotalesMes(mes: Int, anno: Int): List<Agrupado>
     @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where anno = :anno group by tipo order by total desc")
-    fun getTotalesAnno(anno: Int): Flow<List<Agrupado>>
+    suspend fun getTotalesAnno(anno: Int): List<Agrupado>
     @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where mes = :mes and anno = :anno and dia = :dia group by tipo order by total desc")
-    fun getTotalesDia(mes: Int, anno: Int, dia: Int): Flow<List<Agrupado>>
+    suspend fun getTotalesDia(mes: Int, anno: Int, dia: Int): List<Agrupado>
 
     @Query("SELECT * FROM entradas WHERE concepto LIKE :nombre order by anno desc, mes desc, dia desc, hora desc, min desc")
     fun getAllFiltro(nombre: String): Flow<List<Entrada>>

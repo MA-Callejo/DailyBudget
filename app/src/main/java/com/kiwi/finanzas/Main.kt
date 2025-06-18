@@ -68,7 +68,7 @@ fun Greeting(context: Context) {
     val navController = rememberNavController()
     val currentTime = LocalDateTime.now()
     var anno: Int? = currentTime.year
-    var mes: Int? = currentTime.monthValue + 1
+    var mes: Int? = currentTime.monthValue
     var dia: Int? = null
     val navigationItems = listOf(
         NavigationItem(

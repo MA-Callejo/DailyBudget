@@ -2,6 +2,7 @@ package com.kiwi.finanzas
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.collectAsState
 
 fun getValidatedNumber(text: String): String {
     // Start by filtering out unwanted characters like commas and multiple decimals
@@ -35,4 +36,24 @@ fun savePreference(context: Context, key: String, value: Float) {
 fun getPreference(context: Context, key: String): Float {
     val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
     return sharedPreferences.getFloat(key, 1000f)
+}
+
+fun getPresupuesto(context: Context): Float {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
+    val maximo = sharedPreferences.getFloat("maxDia", 1000f)
+    val periodo = sharedPreferences.getFloat("periodo", 0f)
+    return when(periodo){
+        1f -> {
+            maximo * 31
+        }
+        2f -> {
+            maximo * 4
+        }
+        3f -> {
+            maximo * 2
+        }
+        else -> {
+            maximo
+        }
+    }
 }

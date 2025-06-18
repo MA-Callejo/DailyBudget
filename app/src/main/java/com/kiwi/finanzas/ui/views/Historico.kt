@@ -3,6 +3,7 @@ package com.kiwi.finanzas.ui.views
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -38,6 +39,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
@@ -47,6 +49,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,11 +79,15 @@ import com.kiwi.finanzas.db.Entrada
 import com.kiwi.finanzas.db.EntradaDAO
 import com.kiwi.finanzas.db.TipoDAO
 import com.kiwi.finanzas.getPreference
+import com.kiwi.finanzas.getPresupuesto
+import com.kiwi.finanzas.isLeapYear
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.time.LocalDateTime
+import java.time.Month
+import java.util.Locale
 import kotlin.math.max
 
 
@@ -95,21 +102,55 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     var total by remember { mutableStateOf(0f) }
     var entradas by remember { mutableStateOf<List<Entrada>?>(null) }
     var agrupados by remember { mutableStateOf<List<Pair<Int, List<Agrupado>>>?>(null) }
+    var detallesConsulta by remember { mutableStateOf<List<Agrupado>?>(null) }
+    var entradaEdit: Entrada? by remember { mutableStateOf(null) }
+    var scope = rememberCoroutineScope()
+    val presupuesto = getPresupuesto(context)
 
-    fun obtenerAgrupados(){
-
-    }
-    fun obtenerDia(){
-
-    }
-    suspend fun obtenerDatos(){
-        if(diaAct != null){
-            entradas = null
-            obtenerAgrupados()
-        }else{
-            agrupados = null
-            obtenerDia()
+    suspend fun getAnnos(): List<Pair<Int, List<Agrupado>>>{
+        val annos = daoEntradas.getAnnos()
+        val res = mutableListOf<Pair<Int, List<Agrupado>>>()
+        annos.forEach{ ann ->
+            res.add(Pair(ann, daoEntradas.getTotalesAnno(ann)))
         }
+        return res
+    }
+    suspend fun getMeses(): List<Pair<Int, List<Agrupado>>>{
+        val res = mutableListOf<Pair<Int, List<Agrupado>>>()
+        for(i in 1..12){
+            res.add(Pair(i, daoEntradas.getTotalesMes(i, annoAct!!)))
+        }
+        return res
+    }
+    suspend fun getDias(): List<Pair<Int, List<Agrupado>>>{
+        val res = mutableListOf<Pair<Int, List<Agrupado>>>()
+        for(i in 1..Month.of(mesAct!!).length(isLeapYear(annoAct!!))){
+            res.add(Pair(i, daoEntradas.getTotalesDia(mesAct!!, annoAct!!, i)))
+        }
+        return res
+    }
+
+    suspend fun obtenerDatos(){
+        agrupados = null
+        entradas = null
+        if(diaAct != null){
+            entradas = daoEntradas.getAllDia(mesAct!!, diaAct!!, annoAct!!)
+            total = entradas!!.sumOf { it1 -> it1.cantidad }.toFloat()
+        }else{
+            agrupados = if(mesAct != null){
+                getDias()
+            }else{
+                if(annoAct != null){
+                    getMeses()
+                }else{
+                    getAnnos()
+                }
+            }
+            total = agrupados!!.sumOf { it2 -> it2.second.sumOf { it3 -> it3.total } }.toFloat()
+        }
+    }
+    LaunchedEffect(Unit) {
+        scope.launch { obtenerDatos() }
     }
 
     fun changeFecha(anno: Int?, mes: Int?, dia: Int?){
@@ -117,10 +158,51 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
         annoAct = anno
         mesAct = mes
         diaAct = dia
+        scope.launch { obtenerDatos() }
     }
 
-    if(tipos != null){
-        Scaffold(modifier = modifier, topBar = {
+
+    BackHandler(enabled = true, onBack = {
+        if (mesAct == null) {
+            changeFecha(null, null, null)
+        }else {
+            if (diaAct == null) {
+                changeFecha(annoAct, null, null)
+            } else {
+                changeFecha(annoAct, mesAct, null)
+            }
+        }
+    })
+    if(showDetalles && tipos != null && detallesConsulta != null){
+        DialogDetalles(onDismis = {showDetalles = false
+                                  detallesConsulta = null}, agrupadosComp = detallesConsulta!!)
+    }
+    if(showEdit && tipos != null) {
+        if (entradaEdit != null) {
+            DialogEdit(
+                context, entrada = entradaEdit!!, onDismis = {
+                    showEdit = false
+                    entradaEdit = null
+                }, onEdit = { ent ->
+                    scope.launch {
+                        daoEntradas.update(ent)
+                        showEdit = false
+                        entradaEdit = null
+                        obtenerDatos()
+                    }
+                }, tipos = tipos!!,
+                onDelete = { id ->
+                    scope.launch {
+                        daoEntradas.delete(id)
+                        showEdit = false
+                        entradaEdit = null
+                        obtenerDatos()
+                    }
+                })
+        }
+    }
+    if(tipos != null && (entradas != null || agrupados != null)){
+        Scaffold(modifier = modifier.blur(if (showDetalles || showEdit) 16.dp else 0.dp), topBar = {
             Row(){
                 if(annoAct != null) {
                     IconButton(onClick = {
@@ -128,9 +210,9 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                             changeFecha(null, null, null)
                         }else {
                             if (diaAct == null) {
-                                changeFecha(anno, null, null)
+                                changeFecha(annoAct, null, null)
                             } else {
-                                changeFecha(anno, mes, null)
+                                changeFecha(annoAct, mesAct, null)
                             }
                         }
                     }) {
@@ -148,48 +230,158 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
             }
         }) { paddingValues ->
             Column(modifier = Modifier
-                .blur(if (showDetalles || showEdit) 16.dp else 0.dp)
+
                 .padding(paddingValues)) {
 
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(gastos) { it ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(10.dp, 3.dp),
-                            onClick = {
-
-                            }
-                        ) {
-                            Text(
-                                text = it.concepto,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(10.dp, 5.dp),
-                                style = TextStyle(
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = tipos.first { t -> t.id == it.tipo }.textColor(),
-                            )
-                            Row {
-                                Text(
-                                    text = DecimalFormat("0.00€").format(it.cantidad),
+                if(entradas != null) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        if(entradas != null) {
+                            items(entradas!!) { it ->
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .weight(1f)
-                                        .padding(10.dp, 5.dp),
-                                    style = TextStyle(
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = if (it.cantidad > 0) myRed else myGreen
-                                )
-                                Text(
-                                    text = "${it.dia}-${it.mes}-${it.anno}",
-                                    modifier = Modifier.padding(2.dp),
-                                    color = tipos.first { t -> t.id == it.tipo }.textColor(),
-                                )
+                                        .padding(10.dp, 3.dp),
+                                    colors = CardDefaults.cardColors(containerColor = tipos!!.first { t -> it.tipo == t.id }
+                                        .color()),
+                                    onClick = {
+                                        entradaEdit = it
+                                        showEdit = true
+                                    }
+                                ) {
+                                    Text(
+                                        text = it.concepto,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp, 5.dp),
+                                        style = TextStyle(
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = tipos!!.first { t -> t.id == it.tipo }.textColor(),
+                                    )
+                                    Row {
+                                        Text(
+                                            text = DecimalFormat("0.00€").format(it.cantidad),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f)
+                                                .padding(10.dp, 5.dp),
+                                            style = TextStyle(
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = if (it.cantidad > 0) myRed else myGreen
+                                        )
+                                        Text(
+                                            text = "${it.dia}-${it.mes}-${it.anno}",
+                                            modifier = Modifier.padding(2.dp),
+                                            color = tipos!!.first { t -> t.id == it.tipo }
+                                                .textColor(),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if(agrupados != null){
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        if(agrupados != null) {
+                            items(agrupados!!) { agrupados ->
+                                val totalCoste = agrupados.second.sumOf { it2 -> it2.total }
+                                var inicio = 90f
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp, 3.dp),
+                                    onClick = {
+                                        if (mesAct != null) {
+                                            changeFecha(annoAct, mesAct, agrupados.first)
+                                        } else {
+                                            if (annoAct != null) {
+                                                changeFecha(annoAct, agrupados.first, null)
+                                            } else {
+                                                changeFecha(agrupados.first, null, null)
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Row {
+                                        Column() {
+                                            Text(
+                                                text = if (mesAct != null)
+                                                    "Dia ${agrupados.first}"
+                                                else if (annoAct != null)
+                                                    Month.of(agrupados.first).name
+                                                else
+                                                    "Year ${agrupados.first}",
+                                                modifier = Modifier.padding(2.dp)
+                                            )
+                                            Row() {
+                                                val presupuestoTot =
+                                                    if (mesAct != null) presupuesto / Month.of(
+                                                        mesAct!!
+                                                    ).length(
+                                                        isLeapYear(annoAct!!)
+                                                    ) else if (annoAct != null) presupuesto else presupuesto * 12f
+                                                Text(
+                                                    text = DecimalFormat("0.00€").format(totalCoste),
+                                                    modifier = Modifier
+                                                        .padding(10.dp, 5.dp),
+                                                    style = TextStyle(
+                                                        fontSize = 24.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                )
+                                                Text(
+                                                    text = DecimalFormat("0.00€").format(
+                                                        presupuestoTot - totalCoste
+                                                    ),
+                                                    modifier = Modifier
+                                                        .padding(10.dp, 5.dp),
+                                                    style = TextStyle(
+                                                        fontSize = 24.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    color = if (totalCoste > presupuestoTot) myRed else myGreen
+                                                )
+                                            }
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(8.dp)
+                                        ) {
+                                            Canvas(
+                                                modifier = Modifier
+                                                    .width(100.dp)
+                                                    .height(100.dp)
+                                                    .pointerInput(Unit) {
+                                                        detectTapGestures(
+                                                            onTap = {
+                                                                showDetalles = true
+                                                                detallesConsulta = agrupados.second
+                                                            }
+                                                        )
+                                                    }
+
+                                            ) {
+                                                drawArc(Color.Gray, 0f, 360f, true)
+                                                agrupados.second.filter { it2 -> it2.total > 0 }.forEach {
+                                                    val fin =
+                                                        ((it.total / totalCoste) * 360f).toFloat()
+                                                    drawArc(
+                                                        it.color(),
+                                                        -1f * inicio,
+                                                        -1f * fin,
+                                                        true
+                                                    )
+                                                    inicio += fin
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -209,7 +401,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     }
 }
 
-
+/*
 @Composable
 fun HistoricoOld(navController: NavController, anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, changeFechas: (anno: Int, mes: Int, dia: Int) -> Unit) {
     val tipos by daoTipos.getAll().collectAsState(initial = emptyList())
@@ -560,4 +752,4 @@ fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: (estad
                 color = if(resultado >= 0) myRed else myGreen)
         }
     }
-}
+}*/
