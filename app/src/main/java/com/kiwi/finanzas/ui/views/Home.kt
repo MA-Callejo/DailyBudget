@@ -248,6 +248,17 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
             gastosNull = gastosNull?.plus(daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, 10, gastosNull?.size ?: 0))
         }
     }
+    fun reloadEntradas(){
+        scope.launch {
+            gastosNull = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, gastosNull?.size ?: 10, 0)
+        }
+    }
+    fun addSingle(){
+        scope.launch {
+            val entrada = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, 1, 0)
+            gastosNull = entrada.plus(gastosNull ?: listOf())
+        }
+    }
     val gastosPeriodo by when(periodo){
         1f -> {
             daoEntradas.getGastoPeriodoDia(
@@ -310,6 +321,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                 }, onEdit = { ent ->
                     coroutineScope.launch {
                         daoEntradas.update(ent)
+                        reloadEntradas()
                         showEdit = false
                         entradaEdit = null
                     }
@@ -317,6 +329,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                     onDelete = { id ->
                         coroutineScope.launch {
                             daoEntradas.delete(id)
+                            reloadEntradas()
                             showEdit = false
                             entradaEdit = null
                         }
@@ -331,6 +344,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                     coroutineScope.launch {
                         daoEntradas.insert(ent)
                         addNew = false
+                        addSingle()
                     }
                 }, tipos = tipos, entrada = null)
         }

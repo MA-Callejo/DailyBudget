@@ -77,7 +77,7 @@ import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Historico(navController: NavController, anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context) {
+fun Historico(navController: NavController, anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, changeFechas: (anno: Int, mes: Int, dia: Int) -> Unit) {
     val tipos by daoTipos.getAll().collectAsState(initial = emptyList())
     var showEdit by remember { mutableStateOf(false) }
     var detallesShow by remember { mutableStateOf(false) }

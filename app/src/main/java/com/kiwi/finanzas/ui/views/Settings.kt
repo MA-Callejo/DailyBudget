@@ -106,7 +106,7 @@ fun savePreference(context: Context, key: String, value: Float) {
 
 fun getPreference(context: Context, key: String): Float {
     val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
-    return sharedPreferences.getFloat(key, 0f)
+    return sharedPreferences.getFloat(key, 1000f)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,12 +167,12 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                         color = Color.White
                     )
                     OutlinedTextField(
-                        modifier = Modifier.width(100.dp),
+                        modifier = Modifier.width(110.dp),
                         textStyle = TextStyle(fontSize = 24.sp),
                         value = text,
                         onValueChange = {
                             val valor = getValidatedNumber(it)
-                            val valorNum = if (valor == "") 0f else valor.toFloat()
+                            val valorNum = if (valor == "") 1000f else valor.toFloat()
                             text = valorNum.toString()
                             savePreference(context, "maxDia", valorNum)
                         },

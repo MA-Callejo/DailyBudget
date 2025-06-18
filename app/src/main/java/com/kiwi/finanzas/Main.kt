@@ -67,6 +67,9 @@ fun Greeting(context: Context) {
     val daoTipos = database.typeDao()
     val navController = rememberNavController()
     val currentTime = LocalDateTime.now()
+    var anno: Int? = currentTime.year
+    var mes: Int? = currentTime.monthValue + 1
+    var dia: Int? = null
     val navigationItems = listOf(
         NavigationItem(
             title = "Home",
@@ -74,14 +77,14 @@ fun Greeting(context: Context) {
             route = "home"
         ),
         NavigationItem(
+            title = "Historic",
+            icon = Icons.Default.DateRange,
+            route = "historico"
+        ),
+        NavigationItem(
             title = "Setting",
             icon = Icons.Default.Settings,
             route = "settings"
-        ),
-        NavigationItem(
-            title = "Historic",
-            icon = Icons.Default.DateRange,
-            route = "historico/"+currentTime.year.toString()+"/"+currentTime.monthValue.toString()+"/ "
         )
     )
     val selectedNavigationIndex = rememberSaveable {
@@ -119,25 +122,16 @@ fun Greeting(context: Context) {
             }
         }
     ) { innerPadding ->
-        val graph =
-            navController.createGraph(startDestination = "historico/"+currentTime.year.toString()+"/"+currentTime.monthValue.toString()+"/ ") {
-                composable("historico/{anno}/{mes}/{dia}") { backStackEntry ->
-                    val anno = backStackEntry.arguments?.getString("anno")?.toIntOrNull()
-                    val mes = backStackEntry.arguments?.getString("mes")?.toIntOrNull()
-                    val dia = backStackEntry.arguments?.getString("dia")?.toIntOrNull()
-                    Historico(navController, anno, mes, dia, daoEntradas, daoTipos, context)
-                }
-            }
         when(selectedNavigationIndex.intValue){
             1 -> {
                 Settings(daoTipos, context, Modifier.padding(innerPadding))
             }
             2 -> {
-                NavHost(
-                    navController = navController,
-                    graph = graph,
-                    modifier = Modifier.padding(innerPadding)
-                )
+                Historico(navController, anno, mes, dia, daoEntradas, daoTipos, context, {annoNew, mesNew, diaNew ->
+                    anno = annoNew
+                    mes = mesNew
+                    dia = diaNew
+                })
             }
             else -> {
                 Home(daoEntradas, daoTipos, context, Modifier.padding(innerPadding))
