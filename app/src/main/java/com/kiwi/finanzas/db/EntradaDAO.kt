@@ -12,7 +12,7 @@ interface EntradaDAO {
     @Query("SELECT * FROM entradas")
     fun getAll(): Flow<List<Entrada>>
 
-    @Query("SELECT * FROM entradas where mes = :mes and anno = :anno order by dia desc, hora desc, min desc LIMIT :limit OFFSET :skip")
+    @Query("SELECT * FROM entradas where mes = :mes and anno = :anno order by dia desc, hora desc, min desc, id desc LIMIT :limit OFFSET :skip")
     suspend fun getMesHome(mes: Int, anno: Int, limit: Int, skip: Int): List<Entrada>
 
     @Insert
@@ -39,13 +39,10 @@ interface EntradaDAO {
     fun getAllMes(mes: Int, anno: Int): Flow<List<Entrada>>
 
     @Query("SELECT * FROM entradas where (((anno-1)*372) + ((mes-1)*31) + dia) >= :dia")
-    fun getGastoPeriodoDia(dia: Int): Flow<List<Entrada>>
+    fun getGastoPeriodo(dia: Int): Flow<List<Entrada>>
 
-    @Query("SELECT * FROM entradas where (((anno-1)*372) + ((mes-1)*31) + dia) >= :dia")
-    fun getGastoPeriodoSemana(dia: Int): Flow<List<Entrada>>
-
-    @Query("SELECT * FROM entradas where (((anno-1)*372) + ((mes-1)*31) + dia) >= :dia")
-    fun getGastoPeriodoQuincena(dia: Int): Flow<List<Entrada>>
+    @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where (((entradas.anno-1)*372) + ((entradas.mes-1)*31) + entradas.dia) >= :dia group by tipo order by total desc")
+    fun getTotalesPeriodo(dia: Int): Flow<List<Agrupado>>
 
     @Query("SELECT * FROM entradas where mes = :mes and anno = :anno and dia = :dia")
     suspend fun getAllDia(mes: Int, dia: Int, anno: Int): List<Entrada>

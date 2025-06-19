@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.windowInsetsEndWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -191,7 +193,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                         modifier = Modifier.padding(5.dp, 0.dp, 20.dp, 0.dp)
                     )
                 }
-                Row(
+                /*Row(
                     modifier = Modifier.padding(0.dp, 40.dp, 0.dp, 0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -250,7 +252,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                             )
                         }
                     }
-                }
+                }*/
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(
                         modifier = Modifier
@@ -281,7 +283,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                                 colors = CardDefaults.outlinedCardColors(containerColor = it.color()),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(20.dp),
+                                    .padding(top=20.dp, start = 20.dp, bottom = 0.dp, end = 20.dp),
                             ) {
                                 Text(
                                     text = it.nombre,
@@ -293,13 +295,15 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                             }
                         }
                     }
-                    IconButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                    IconButton(modifier = Modifier.align(Alignment.End).padding(end = 5.dp, bottom = 5.dp), onClick = {
                         tipoSelected = null
                         selector = true
                     }) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_input_add),
-                            contentDescription = ""
+                            Icons.Default.AddCircle,
+                            contentDescription = "",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(200.dp)
                         )
                     }
                 }

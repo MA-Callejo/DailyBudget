@@ -96,13 +96,14 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     val tipos by daoTipos.getAll().collectAsState(initial = null)
     var showDetalles by remember { mutableStateOf(false) }
     var showEdit by remember { mutableStateOf(false) }
+    var showCharts by remember { mutableStateOf(true) }
     var annoAct by remember { mutableStateOf(anno) }
     var mesAct by remember { mutableStateOf(mes) }
     var diaAct by remember { mutableStateOf(dia) }
     var total by remember { mutableStateOf(0f) }
     var entradas by remember { mutableStateOf<List<Entrada>?>(null) }
     var agrupados by remember { mutableStateOf<List<Pair<Int, List<Agrupado>>>?>(null) }
-    var detallesConsulta by remember { mutableStateOf<List<Agrupado>?>(null) }
+    var detallesConsulta by remember { mutableStateOf<Pair<Int, List<Agrupado>>?>(null) }
     var entradaEdit: Entrada? by remember { mutableStateOf(null) }
     var scope = rememberCoroutineScope()
     val presupuesto = getPresupuesto(context)
@@ -212,7 +213,16 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     })
     if(showDetalles && tipos != null && detallesConsulta != null){
         DialogDetalles(onDismis = {showDetalles = false
-                                  detallesConsulta = null}, agrupadosComp = detallesConsulta!!)
+                                  detallesConsulta = null}, agrupadosComp = detallesConsulta!!.second,
+            titulo =
+                if (annoAct != null)
+                    "$annoAct/${
+                    if (mesAct != null) 
+                        "${Month.of(mesAct!!).name}/${detallesConsulta!!.first}" 
+                    else 
+                        Month.of(detallesConsulta!!.first).name}"
+                else
+                    "${detallesConsulta!!.first}")
     }
     if(showEdit && tipos != null) {
         if (entradaEdit != null) {
@@ -240,7 +250,10 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     }
     if(tipos != null && (entradas != null || agrupados != null)){
         Scaffold(modifier = modifier.blur(if (showDetalles || showEdit) 16.dp else 0.dp), topBar = {
-            Row(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(20.dp)){
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(20.dp)){
                 if(annoAct != null) {
                     IconButton(onClick = {
                         if (mesAct == null) {
@@ -275,6 +288,17 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         ))
+                }
+                if(diaAct == null) {
+                    IconButton(onClick = {
+                        showCharts = !showCharts
+                    }) {
+                        Icon(
+                            painterResource(if (showCharts) R.drawable.bar_chart_24px else R.drawable.bar_chart_off_24px),
+                            contentDescription = "",
+                            tint = Color.White
+                        )
+                    }
                 }
                 IconButton(onClick = {
                     createFileLauncher.launch("Registro${if (annoAct != null) "_$annoAct${if (mesAct != null) "_$mesAct${if (diaAct != null) "_$diaAct" else ""}" else ""}" else ""}.csv")
@@ -345,100 +369,144 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 if(agrupados != null){
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if(agrupados != null) {
-                            items(agrupados!!) { agrupados ->
-                                val totalCoste = agrupados.second.sumOf { it2 -> it2.total }
-                                var inicio = 90f
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(10.dp, 3.dp),
-                                    onClick = {
-                                        if (mesAct != null) {
-                                            changeFecha(annoAct, mesAct, agrupados.first)
-                                        } else {
-                                            if (annoAct != null) {
-                                                changeFecha(annoAct, agrupados.first, null)
-                                            } else {
-                                                changeFecha(agrupados.first, null, null)
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Row {
-                                        Column() {
-                                            Text(
-                                                text = if (mesAct != null)
-                                                    "Dia ${agrupados.first}"
-                                                else if (annoAct != null)
-                                                    Month.of(agrupados.first).name
-                                                else
-                                                    "Year ${agrupados.first}",
-                                                modifier = Modifier.padding(2.dp)
-                                            )
-                                            Row() {
-                                                val presupuestoTot =
-                                                    if (mesAct != null) presupuesto / Month.of(
-                                                        mesAct!!
-                                                    ).length(
-                                                        isLeapYear(annoAct!!)
-                                                    ) else if (annoAct != null) presupuesto else presupuesto * 12f
-                                                Text(
-                                                    text = DecimalFormat("0.00€").format(totalCoste),
-                                                    modifier = Modifier
-                                                        .padding(10.dp, 5.dp),
-                                                    style = TextStyle(
-                                                        fontSize = 24.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                )
-                                                Text(
-                                                    text = DecimalFormat("0.00€").format(
-                                                        presupuestoTot - totalCoste
-                                                    ),
-                                                    modifier = Modifier
-                                                        .padding(10.dp, 5.dp),
-                                                    style = TextStyle(
-                                                        fontSize = 24.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    ),
-                                                    color = if (totalCoste > presupuestoTot) myRed else myGreen
-                                                )
-                                            }
-                                        }
+                            items(agrupados!!.chunked(2)) { agrupadosDos ->
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    agrupadosDos.forEach { agrupados ->
                                         Box(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .padding(8.dp)
                                         ) {
-                                            Canvas(
-                                                modifier = Modifier
-                                                    .width(100.dp)
-                                                    .height(100.dp)
-                                                    .pointerInput(Unit) {
-                                                        detectTapGestures(
-                                                            onTap = {
-                                                                showDetalles = true
-                                                                detallesConsulta = agrupados.second
-                                                            }
-                                                        )
+                                            ItemView(
+                                                titulo = if (mesAct != null)
+                                                        "Dia ${agrupados.first}"
+                                                    else if (annoAct != null)
+                                                        Month.of(agrupados.first).name
+                                                    else
+                                                        "Year ${agrupados.first}",
+                                                onDetalles = { detallesShow = it },
+                                                onEnter = {
+                                                    if (mesAct != null) {
+                                                        changeFecha(annoAct, mesAct, agrupados.first)
+                                                    } else {
+                                                        if (annoAct != null) {
+                                                            changeFecha(annoAct, agrupados.first, null)
+                                                        } else {
+                                                            changeFecha(agrupados.first, null, null)
+                                                        }
                                                     }
-
-                                            ) {
-                                                drawArc(Color.Gray, 0f, 360f, true)
-                                                agrupados.second.filter { it2 -> it2.total > 0 }.forEach {
-                                                    val fin =
-                                                        ((it.total / totalCoste) * 360f).toFloat()
-                                                    drawArc(
-                                                        it.color(),
-                                                        -1f * inicio,
-                                                        -1f * fin,
-                                                        true
+                                                })
+                                        }
+                                        if (agrupadosDos.size == 1) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(8.dp)
+                                            ) { /* Empty Box to fill the space */ }
+                                        }
+                                    }
+                                    //--------------------------------------------------------------------------
+                                    val totalCoste = agrupados.second.sumOf { it2 -> it2.total }
+                                    var inicio = 90f
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp, 3.dp),
+                                        onClick = {
+                                            if (mesAct != null) {
+                                                changeFecha(annoAct, mesAct, agrupados.first)
+                                            } else {
+                                                if (annoAct != null) {
+                                                    changeFecha(annoAct, agrupados.first, null)
+                                                } else {
+                                                    changeFecha(agrupados.first, null, null)
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Row {
+                                            Column() {
+                                                Text(
+                                                    text = if (mesAct != null)
+                                                        "Dia ${agrupados.first}"
+                                                    else if (annoAct != null)
+                                                        Month.of(agrupados.first).name
+                                                    else
+                                                        "Year ${agrupados.first}",
+                                                    modifier = Modifier.padding(2.dp)
+                                                )
+                                                Row() {
+                                                    val presupuestoTot =
+                                                        if (mesAct != null) presupuesto / Month.of(
+                                                            mesAct!!
+                                                        ).length(
+                                                            isLeapYear(annoAct!!)
+                                                        ) else if (annoAct != null) presupuesto else presupuesto * 12f
+                                                    Text(
+                                                        text = DecimalFormat("0.00€").format(
+                                                            totalCoste
+                                                        ),
+                                                        modifier = Modifier
+                                                            .padding(10.dp, 5.dp),
+                                                        style = TextStyle(
+                                                            fontSize = 24.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
                                                     )
-                                                    inicio += fin
+                                                    Text(
+                                                        text = DecimalFormat("0.00€").format(
+                                                            presupuestoTot - totalCoste
+                                                        ),
+                                                        modifier = Modifier
+                                                            .padding(10.dp, 5.dp),
+                                                        style = TextStyle(
+                                                            fontSize = 24.sp,
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                        color = if (totalCoste > presupuestoTot) myRed else myGreen
+                                                    )
+                                                }
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(8.dp)
+                                            ) {
+                                                Canvas(
+                                                    modifier = Modifier
+                                                        .width(100.dp)
+                                                        .height(100.dp)
+                                                        .pointerInput(Unit) {
+                                                            detectTapGestures(
+                                                                onTap = {
+                                                                    if (agrupados.second.isNotEmpty()) {
+                                                                        showDetalles = true
+                                                                        detallesConsulta =
+                                                                            agrupados
+                                                                    }
+                                                                }
+                                                            )
+                                                        }
+
+                                                ) {
+                                                    drawArc(Color.Gray, 0f, 360f, true)
+                                                    agrupados.second.filter { it2 -> it2.total > 0 }
+                                                        .forEach {
+                                                            val fin =
+                                                                ((it.total / totalCoste) * 360f).toFloat()
+                                                            drawArc(
+                                                                it.color(),
+                                                                -1f * inicio,
+                                                                -1f * fin,
+                                                                true
+                                                            )
+                                                            inicio += fin
+                                                        }
                                                 }
                                             }
                                         }
                                     }
+                                }
                                 }
                             }
                         }
@@ -755,26 +823,10 @@ fun HistoricoOld(navController: NavController, anno: Int?, mes: Int?, dia: Int?,
         }
     }
 }
-
+*/
 @Composable
-fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: (estado: Boolean)-> Unit, daoEntradas: EntradaDAO, maxDia: Float, onEnter: (valor: Int) -> Unit){
-    val currentTime = LocalDateTime.now()
-    val agrupados by when (tipo) {
-        1 -> daoEntradas.getTotalesAnno(anno!!).collectAsState(initial = emptyList())
-        2 -> daoEntradas.getTotales(mes=mes!!, anno=anno!!).collectAsState(initial = emptyList())
-        else -> daoEntradas.getTotalesDia(mes=mes!!, anno=anno!!, dia=dia!!).collectAsState(initial = emptyList())
-    }
-    var detallesShow by remember { mutableStateOf(false) }
-    var total = agrupados.sumOf { it.total }
-    var totalGasto = agrupados.filter{it.total > 0}.sumOf { it.total }
-    var resultado = total
-    var maxTotal = max(totalGasto, total)
-    var inicio = 90f
-    if(detallesShow){
-        DialogDetalles(onDismis = {detallesShow = false
-                                  onDetalles(false)}, agrupadosComp = agrupados)
-    }
-    OutlinedCard(onClick = {onEnter(if(tipo == 1) anno!! else if (tipo == 2) mes!! else dia!!)}, border = BorderStroke(2.dp, if(resultado >= 0) myGreen else myRed)) {
+fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: ()-> Unit, onEnter: () -> Unit){
+    OutlinedCard(onClick = { onEnter() }, border = BorderStroke(2.dp)) {
         Column(modifier = Modifier
             .padding(10.dp)
             .fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
@@ -810,4 +862,4 @@ fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: (estad
                 color = if(resultado >= 0) myRed else myGreen)
         }
     }
-}*/
+}

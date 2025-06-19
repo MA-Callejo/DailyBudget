@@ -82,6 +82,7 @@ import com.kiwi.finanzas.isLeapYear
 import com.kiwi.finanzas.ui.theme.myBlue
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
+import com.kiwi.finanzas.ui.theme.myYellow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
@@ -94,13 +95,13 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
     val coroutineScope = rememberCoroutineScope()
     val currentTime = LocalDateTime.now()
     var gastosNull: List<Entrada>? by remember { mutableStateOf(null) }
-    val agrupadosNull by daoEntradas.getTotales(currentTime.monthValue, currentTime.year).collectAsState(initial = null)
     var showDetalles by remember { mutableStateOf(false) }
     var showEdit by remember { mutableStateOf(false) }
     var addNew by remember { mutableStateOf(false) }
     var entradaEdit: Entrada? by remember { mutableStateOf(null) }
     var scope = rememberCoroutineScope()
     val periodo by remember { mutableStateOf(if(getPreference(context,"periodo") >= 0f) getPreference(context,"periodo") else 1f) }
+    val agrupadosNull by daoEntradas.getTotales(currentTime.monthValue, currentTime.year).collectAsState(initial = null)
     LaunchedEffect(Unit) {
         scope.launch{
             gastosNull = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, 10, 0)
@@ -124,25 +125,50 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
     }
     val gastosPeriodo by when(periodo){
         1f -> {
-            daoEntradas.getGastoPeriodoDia(
+            daoEntradas.getGastoPeriodo(
                 ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31) + currentTime.dayOfMonth
             ).collectAsState(initial = emptyList())
         }
         2f -> {
             val timePeriod = currentTime.minusDays(currentTime.dayOfWeek.value - 1L)
-            daoEntradas.getGastoPeriodoSemana(
+            daoEntradas.getGastoPeriodo(
                 ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
             ).collectAsState(initial = emptyList())
         }
         3f -> {
             val timePeriod = currentTime.minusDays((currentTime.dayOfWeek.value - 1L)+7L)
-            daoEntradas.getGastoPeriodoQuincena(
+            daoEntradas.getGastoPeriodo(
                 ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
             ).collectAsState(initial = emptyList())
         }
         else -> {
             val timePeriod = currentTime.minusDays((currentTime.dayOfMonth.toLong()))
-            daoEntradas.getGastoPeriodoQuincena(
+            daoEntradas.getGastoPeriodo(
+                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
+            ).collectAsState(initial = emptyList())
+        }
+    }
+    val agrupadosPeriodo by when(periodo){
+        1f -> {
+            daoEntradas.getTotalesPeriodo(
+                ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31) + currentTime.dayOfMonth
+            ).collectAsState(initial = emptyList())
+        }
+        2f -> {
+            val timePeriod = currentTime.minusDays(currentTime.dayOfWeek.value - 1L)
+            daoEntradas.getTotalesPeriodo(
+                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
+            ).collectAsState(initial = emptyList())
+        }
+        3f -> {
+            val timePeriod = currentTime.minusDays((currentTime.dayOfWeek.value - 1L)+7L)
+            daoEntradas.getTotalesPeriodo(
+                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
+            ).collectAsState(initial = emptyList())
+        }
+        else -> {
+            val timePeriod = currentTime.minusDays((currentTime.dayOfMonth.toLong()))
+            daoEntradas.getTotalesPeriodo(
                 ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
             ).collectAsState(initial = emptyList())
         }
@@ -154,7 +180,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         val listState = rememberLazyListState()
         var inicio = 90f
         val total1 = agrupados.filter { it.total > 0 }.sumOf { it.total }
-        val total3 = gastos.sumOf { it.cantidad }
+        val total3 = agrupadosPeriodo.sumOf { it.total }
         val gastoMax = when (periodo) {
             1f -> {
                 getPreference(context, "maxDia") / (currentTime.month.length(
@@ -264,7 +290,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                                     )
                                 }
                         ) {
-                            agrupados.filter { it.total > 0 }.forEach {
+                            agrupadosPeriodo.filter { it.total > 0 }.forEach {
                                 val fin = ((it.total / total1) * 360f).toFloat()
                                 drawArc(it.color(), -1f * inicio, -1f * fin, true)
                                 inicio += fin
@@ -292,20 +318,10 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                     )
                 }
                 Row(modifier = Modifier.padding(0.dp, 2.dp, 0.dp, 20.dp)) {
-                    if (agrupados.isNotEmpty()) {
+                    if (agrupadosPeriodo.isNotEmpty()) {
                         Text(
-                            text = DecimalFormat("0.00€").format(
-                                ((getPreference(context, "maxDia") / currentTime.month.length(
-                                    isLeapYear(currentTime.year)
-                                )) * currentTime.dayOfMonth) - total3
-                            ),
-                            color = if (((getPreference(
-                                    context,
-                                    "maxDia"
-                                ) / currentTime.month.length(
-                                    isLeapYear(currentTime.year)
-                                )) * currentTime.dayOfMonth) - total3 < 0f
-                            ) myRed else myGreen,
+                            text = DecimalFormat("0.00€").format(total3),
+                            color = if (total3 >= getPreference(context, "maxDia")) myRed else if(total3 >= (0.8f * getPreference(context, "maxDia"))) myYellow else myGreen,
                             textAlign = TextAlign.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -403,7 +419,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DialogDetalles(onDismis: () -> Unit = {}, agrupadosComp: List<Agrupado> = listOf()){
+fun DialogDetalles(onDismis: () -> Unit = {}, agrupadosComp: List<Agrupado> = listOf(), titulo: String? = null){
     val agrupados = agrupadosComp.filter { it.total > 0 }
     val agrupadosGanancias = agrupadosComp.filter { it.total <= 0 }
     val total1 = agrupados.sumOf { it.total }
@@ -411,10 +427,19 @@ fun DialogDetalles(onDismis: () -> Unit = {}, agrupadosComp: List<Agrupado> = li
     AlertDialog(
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally){
+                if(titulo != null) {
+                    Text(
+                        titulo, style = TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
                 Canvas(
                     modifier = Modifier
-                        .width(100.dp)
-                        .height(100.dp)
+                        .width(200.dp)
+                        .height(200.dp)
                 ) {
                     agrupados.forEach {
                         val fin = ((it.total / total1) * 360f).toFloat()
@@ -434,7 +459,7 @@ fun DialogDetalles(onDismis: () -> Unit = {}, agrupadosComp: List<Agrupado> = li
                                     .fillMaxWidth()
                                     .weight(1f), color = it.textColor())
                                 Text(text = String.format("%.2f€", it.total), color = it.textColor())
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(15.dp))
                                 Text(text = String.format("%.0f", (it.total/total)*100)+"%", color = it.textColor())
                             }
                         }
