@@ -106,6 +106,43 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     var entradaEdit: Entrada? by remember { mutableStateOf(null) }
     var scope = rememberCoroutineScope()
     val presupuesto = getPresupuesto(context)
+    val createFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
+        uri?.let {
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.bufferedWriter().use { writer ->
+                    if(tipos != null) {
+                        if (entradas != null) {
+                            writer.write("Concepto\tFecha\tImporte\tTipo")
+                            writer.newLine()
+                            entradas!!.forEach { entry ->
+                                writer.write("${entry.concepto}\t${entry.anno}-${entry.mes}-${entry.dia}\t${entry.cantidad}\t${tipos!!.find { t -> t.id == entry.tipo }?.nombre}")
+                                writer.newLine()
+                            }
+                        } else {
+                            if (agrupados != null) {
+                                var cabeceras = "${if(mesAct != null) "Dia" else if(annoAct != null) "Mes" else "Año"}\t"
+                                tipos!!.forEach { tp ->
+                                    cabeceras += tp.nombre+"\t"
+                                }
+                                cabeceras += "Total"
+                                writer.write(cabeceras)
+                                writer.newLine()
+                                agrupados!!.forEach { grupo ->
+                                    var linea = "${grupo.first}\t"
+                                    tipos!!.forEach { tp ->
+                                        linea += "${grupo.second.firstOrNull{ gs -> gs.tipoId == tp.id }?.total ?: 0f}\t"
+                                    }
+                                    linea += "${grupo.second.sumOf { gs -> gs.total }}"
+                                    writer.write(linea)
+                                    writer.newLine()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     suspend fun getAnnos(): List<Pair<Int, List<Agrupado>>>{
         val annos = daoEntradas.getAnnos()
@@ -203,7 +240,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     }
     if(tipos != null && (entradas != null || agrupados != null)){
         Scaffold(modifier = modifier.blur(if (showDetalles || showEdit) 16.dp else 0.dp), topBar = {
-            Row(){
+            Row(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(20.dp)){
                 if(annoAct != null) {
                     IconButton(onClick = {
                         if (mesAct == null) {
@@ -223,9 +260,30 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                         )
                     }
                 }
-                Column() {
-                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/$mesAct${if (diaAct != null) "/$diaAct" else ""}" else ""}" else "TODOS")
-                    Text("$total€")
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)) {
+                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/${Month.of(mesAct!!).name}${if (diaAct != null) "/$diaAct" else ""}" else ""}" else "TODOS",
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold
+                        ))
+                    Text(DecimalFormat("0.00€").format(total),
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        ))
+                }
+                IconButton(onClick = {
+                    createFileLauncher.launch("Registro${if (annoAct != null) "_$annoAct${if (mesAct != null) "_$mesAct${if (diaAct != null) "_$diaAct" else ""}" else ""}" else ""}.csv")
+                }) {
+                    Icon(
+                        painterResource(R.drawable.archive_24px),
+                        contentDescription = "",
+                        tint = Color.White
+                    )
                 }
             }
         }) { paddingValues ->
