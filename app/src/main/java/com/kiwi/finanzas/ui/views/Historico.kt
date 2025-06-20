@@ -230,9 +230,9 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 if (annoAct != null)
                     "$annoAct/${
                     if (mesAct != null) 
-                        "${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))}/${detallesConsulta!!.first}" 
+                        "${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0))}/${detallesConsulta!!.first}" 
                     else 
-                        Month.of(detallesConsulta!!.first).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))}"
+                        Month.of(detallesConsulta!!.first).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0))}"
                 else
                     "${detallesConsulta!!.first}")
     }
@@ -288,7 +288,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 Column(modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)) {
-                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))}${if (diaAct != null) "/$diaAct" else ""}" else ""}" else stringResource(R.string.todos),
+                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0))}${if (diaAct != null) "/$diaAct" else ""}" else ""}" else stringResource(R.string.todos),
                         textAlign = TextAlign.Center,
                         style = TextStyle(
                             fontSize = 26.sp,
@@ -410,7 +410,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                                 titulo = if (mesAct != null)
                                                     context.getString(R.string.dia)+"${agrupados.first}"
                                                     else if (annoAct != null)
-                                                        Month.of(agrupados.first).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))
+                                                        Month.of(agrupados.first).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0))
                                                     else
                                                     context.getString(R.string.year)+"${agrupados.first}",
                                                 presupuesto = if (mesAct != null) presupuesto / Month.of(
