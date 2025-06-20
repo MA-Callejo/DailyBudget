@@ -75,10 +75,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
@@ -88,6 +91,7 @@ import androidx.navigation.NavHostController
 import com.kiwi.finanzas.db.Entrada
 import com.kiwi.finanzas.db.Tipo
 import com.kiwi.finanzas.db.TipoDAO
+import com.kiwi.finanzas.formatAsCurrency
 import com.kiwi.finanzas.getPreference
 import com.kiwi.finanzas.getValidatedNumber
 import com.kiwi.finanzas.hsvToColor
@@ -97,6 +101,7 @@ import com.kiwi.finanzas.ui.theme.myBlue
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
 import java.time.LocalDateTime
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -108,7 +113,7 @@ import kotlin.math.roundToInt
 @Composable
 fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
     val tiposNull by daoTipos.getAll().collectAsState(initial = null)
-    var text by remember { mutableStateOf(getPreference(context, "maxDia").toString()) }
+    var text by remember { mutableStateOf(formatAsCurrency(DecimalFormat("0.00").format(getPreference(context, "maxDia")))) }
     var tipoSelected: Tipo? by remember { mutableStateOf(null) }
     var selector by remember { mutableStateOf(false) }
     var completos by remember { mutableStateOf(false) }
@@ -158,22 +163,26 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        text = "Gasto mensual",
+                        text = stringResource(com.kiwi.finanzas.R.string.gasto_mensual),
                         color = Color.White
                     )
+                    val textFieldValue = remember(text) {
+                        TextFieldValue(
+                            text = text,
+                            selection = TextRange(text.length) // Cursor al final
+                        )
+                    }
                     OutlinedTextField(
-                        modifier = Modifier.width(110.dp),
+                        modifier = Modifier.width(130.dp),
                         textStyle = TextStyle(fontSize = 24.sp),
-                        value = text,
-                        onValueChange = {
-                            val valor = getValidatedNumber(it)
-                            val valorNum = if (valor == "") 1000f else valor.toFloat()
-                            text = valorNum.toString()
-                            savePreference(context, "maxDia", valorNum)
+                        value = textFieldValue,
+                        onValueChange = { newText ->
+                            text = formatAsCurrency(newText.text)
+                            savePreference(context, "maxDia", text.toFloat())
                         },
                         placeholder = {
                             Text(
-                                text = "Valor",
+                                text = stringResource(com.kiwi.finanzas.R.string.valor),
                                 modifier = Modifier.width(100.dp),
                                 style = TextStyle(fontSize = 24.sp)
                             )
@@ -193,66 +202,6 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                         modifier = Modifier.padding(5.dp, 0.dp, 20.dp, 0.dp)
                     )
                 }
-                /*Row(
-                    modifier = Modifier.padding(0.dp, 40.dp, 0.dp, 0.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(fontSize = 24.sp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        text = "Periodo de gestión: ",
-                        color = Color.White
-                    )
-                    Column {
-                        DropdownMenu(
-                            expanded = expandedDay,
-                            onDismissRequest = { expandedDay = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Diario") },
-                                onClick = {
-                                    periodo = 1f
-                                    savePreference(context, "periodo", periodo)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Semanal") },
-                                onClick = {
-                                    periodo = 2f
-                                    savePreference(context, "periodo", periodo)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Quincenal") },
-                                onClick = {
-                                    periodo = 3f
-                                    savePreference(context, "periodo", periodo)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Mensual") },
-                                onClick = {
-                                    periodo = 4f
-                                    savePreference(context, "periodo", periodo)
-                                }
-                            )
-                        }
-                        TextButton(onClick = { expandedDay = true }) {
-                            Text(
-                                text = when (periodo) {
-                                    1f -> "Diario"
-                                    2f -> "Semanal"
-                                    3f -> "Quincenal"
-                                    else -> "Mensual"
-                                },
-                                style = TextStyle(fontSize = 24.sp),
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }*/
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(
                         modifier = Modifier
@@ -260,7 +209,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                             .weight(1f)
                     )
                     Text(
-                        text = "Mostrar eliminados",
+                        text = stringResource(com.kiwi.finanzas.R.string.mostrar_eliminados),
                         color = Color.White,
                         modifier = Modifier.padding(5.dp, 0.dp)
                     )
@@ -283,7 +232,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                                 colors = CardDefaults.outlinedCardColors(containerColor = it.color()),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top=20.dp, start = 20.dp, bottom = 0.dp, end = 20.dp),
+                                    .padding(top = 20.dp, start = 20.dp, bottom = 0.dp, end = 20.dp),
                             ) {
                                 Text(
                                     text = it.nombre,
@@ -295,7 +244,9 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                             }
                         }
                     }
-                    IconButton(modifier = Modifier.align(Alignment.End).padding(end = 5.dp, bottom = 5.dp), onClick = {
+                    IconButton(modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(end = 5.dp, bottom = 5.dp), onClick = {
                         tipoSelected = null
                         selector = true
                     }) {
@@ -344,7 +295,7 @@ fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tip
                             },
                             placeholder = {
                                 Text(
-                                    text = "Nombre",
+                                    text = stringResource(com.kiwi.finanzas.R.string.nombre),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             },
@@ -374,7 +325,7 @@ fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tip
                                 onClick = {
                                     onDelete(tipo.id)
                                 }) {
-                                Text("Borrar", color = Color.White)
+                                Text(stringResource(com.kiwi.finanzas.R.string.borrar), color = Color.White)
                             }
                         } else {
                             TextButton(
@@ -382,7 +333,7 @@ fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tip
                                 onClick = {
                                     onRestore(tipo.id)
                                 }) {
-                                Text("Restaurar", color = Color.Black)
+                                Text(stringResource(com.kiwi.finanzas.R.string.restaurar), color = Color.Black)
                             }
                         }
                         Spacer(modifier = Modifier.width(50.dp))
@@ -400,7 +351,7 @@ fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tip
                             )
                         }
                     }, colors = ButtonDefaults.buttonColors(containerColor = myBlue)) {
-                        Text("OK", color = Color.White)
+                        Text(stringResource(com.kiwi.finanzas.R.string.ok), color = Color.White)
                     }
                 }
             }

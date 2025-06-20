@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,16 +61,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -84,6 +89,7 @@ import com.kiwi.finanzas.db.TipoDAO
 import com.kiwi.finanzas.getPreference
 import com.kiwi.finanzas.getPresupuesto
 import com.kiwi.finanzas.isLeapYear
+import com.kiwi.finanzas.textoGraficas
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
 import kotlinx.coroutines.launch
@@ -110,6 +116,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     var entradaEdit: Entrada? by remember { mutableStateOf(null) }
     var scope = rememberCoroutineScope()
     val presupuesto = getPresupuesto(context)
+    var primeraEntrada by remember { mutableStateOf<Entrada?>(null) }
     val createFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         uri?.let {
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
@@ -174,6 +181,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     suspend fun obtenerDatos(){
         agrupados = null
         entradas = null
+        primeraEntrada = null
         if(diaAct != null){
             entradas = daoEntradas.getAllDia(mesAct!!, diaAct!!, annoAct!!)
             total = entradas!!.sumOf { it1 -> it1.cantidad }.toFloat()
@@ -184,6 +192,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 if(annoAct != null){
                     getMeses()
                 }else{
+                    primeraEntrada = daoEntradas.getPrimeraEntrada().firstOrNull()
                     getAnnos()
                 }
             }
@@ -221,9 +230,9 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 if (annoAct != null)
                     "$annoAct/${
                     if (mesAct != null) 
-                        "${Month.of(mesAct!!).name}/${detallesConsulta!!.first}" 
+                        "${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))}/${detallesConsulta!!.first}" 
                     else 
-                        Month.of(detallesConsulta!!.first).name}"
+                        Month.of(detallesConsulta!!.first).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))}"
                 else
                     "${detallesConsulta!!.first}")
     }
@@ -279,7 +288,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 Column(modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)) {
-                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/${Month.of(mesAct!!).name}${if (diaAct != null) "/$diaAct" else ""}" else ""}" else "TODOS",
+                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))}${if (diaAct != null) "/$diaAct" else ""}" else ""}" else stringResource(R.string.todos),
                         textAlign = TextAlign.Center,
                         style = TextStyle(
                             fontSize = 26.sp,
@@ -297,7 +306,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                         showCharts = !showCharts
                     }) {
                         Icon(
-                            painterResource(if (showCharts) R.drawable.bar_chart_24px else R.drawable.bar_chart_off_24px),
+                            painterResource(if (showCharts) R.drawable.bar_chart_off_24px else R.drawable.bar_chart_24px),
                             contentDescription = "",
                             tint = Color.White
                         )
@@ -368,11 +377,27 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 }
                 if(agrupados != null){
                     if(showCharts){
-                        graficas(agrupados!!)
+                        graficas(agrupados!!,
+                            if (mesAct != null)
+                                Month.of(mesAct!!).length(isLeapYear(annoAct!!)
+                            ) else
+                                12,
+                            (if (mesAct != null) presupuesto / Month.of(
+                                mesAct!!
+                            ).length(
+                                isLeapYear(annoAct!!)
+                            ) else if (annoAct != null)
+                                presupuesto
+                            else
+                                presupuesto * 12f).toDouble(),
+                            onDetalles = { det ->
+                                showDetalles = true
+                                detallesConsulta = det
+                            })
                     }
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if(agrupados != null) {
-                            items(agrupados!!.filter { ag -> ag.second.isNotEmpty() }.chunked(2)) { agrupadosDos ->
+                            items(agrupados!!.filter { ag -> ag.second.isNotEmpty() }.sortedBy { ag -> ag.first } .chunked(2)) { agrupadosDos ->
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     agrupadosDos.forEach { agrupados ->
                                         Box(
@@ -383,11 +408,11 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                             ItemView(
                                                 agrupados = agrupados.second,
                                                 titulo = if (mesAct != null)
-                                                        "Dia ${agrupados.first}"
+                                                    context.getString(R.string.dia)+"${agrupados.first}"
                                                     else if (annoAct != null)
-                                                        Month.of(agrupados.first).name
+                                                        Month.of(agrupados.first).getDisplayName(java.time.format.TextStyle.FULL,context.resources.configuration.getLocales().get(0))
                                                     else
-                                                        "Year ${agrupados.first}",
+                                                    context.getString(R.string.year)+"${agrupados.first}",
                                                 presupuesto = if (mesAct != null) presupuesto / Month.of(
                                                     mesAct!!
                                                 ).length(
@@ -410,6 +435,15 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                                             changeFecha(agrupados.first, null, null)
                                                         }
                                                     }
+                                                },
+                                                recortar = if (annoAct == null && primeraEntrada != null) {
+                                                    if(agrupados.first == primeraEntrada!!.anno){
+                                                        (primeraEntrada!!.mes - 1)*presupuesto
+                                                    }else{
+                                                        0f
+                                                    }
+                                                } else {
+                                                    0f
                                                 })
                                         }
                                         if (agrupadosDos.size == 1) {
@@ -441,39 +475,128 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
 }
 
 @Composable
-fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>){
-    Canvas(modifier = Modifier.padding(20.dp).fillMaxWidth().height(200.dp)){
-        val height = this.size.height
-        val width = this.size.width
-        val maximo = agrupados.maxOf { ag -> ag.second.sumOf { ags -> ags.total } }
-        val factorHeight = height / maximo
-        val minimoId = agrupados.minOfOrNull { ag -> ag.first }
-        val maximoId = agrupados.maxOfOrNull { ag -> ag.first }
-        val entradas = if((minimoId ?: 0) > 100) ((maximoId ?: 0) - (minimoId ?: 0)) else (maximoId ?: 0)
-        val factorWidth = width / (entradas * 2)
-        val indices = if((minimoId ?: 0) > 100){
-            (minimoId ?: 0)..(maximoId ?: 0)
-        }else{
-            0..(maximoId ?: 0)
-        }
-        drawRect(Color.Green, Offset(0f, 0f), this.size)
-        drawRect(Color.White, Offset(0f, this.size.height), Size(this.size.width, 5f))
-        indices.forEachIndexed { index, ind ->
-            val entradas = agrupados.firstOrNull { ag -> ag.first == ind }?.second
-            if(entradas != null){
-                var altura = 0f
-                entradas.forEach { en ->
-                    val alturaFin = altura+(en.total * factorHeight).toFloat()
-                    drawRect(en.color(), Offset(index*2*factorWidth, width - alturaFin), Size(factorWidth, alturaFin))
-                    altura = alturaFin
+fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, presupuesto: Double=1000.0, onDetalles: (Pair<Int, List<Agrupado>>) -> Unit){
+    val textMeasurer = rememberTextMeasurer()
+    val drawnRects = remember { mutableStateListOf<Pair<Rect, Int>>() }
+    Box(modifier = Modifier
+        .padding(20.dp)
+        .fillMaxWidth()
+        .height(200.dp)
+        .pointerInput(Unit) {
+            detectTapGestures { offset ->
+                val match = drawnRects.firstOrNull { (rect, _) ->
+                    rect.contains(offset)
+                }
+                match?.let { (_, dato) ->
+                    val detalles = agrupados.firstOrNull { it.first == dato }
+                    if (detalles != null) {
+                        onDetalles(detalles)
+                    }
                 }
             }
+        }) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawnRects.clear()
+            val height = this.size.height - 50f
+            val width = this.size.width - 100f
+            val maximo =
+                max(presupuesto, agrupados.maxOf { ag -> ag.second.sumOf { ags -> ags.total } })
+            val factorHeight = height / maximo
+            val minimoId = agrupados.minOfOrNull { ag -> ag.first }
+            val maximoId = agrupados.maxOfOrNull { ag -> ag.first }
+            val entradas =
+                if ((minimoId ?: 0) > 100) ((maximoId ?: 0) - (minimoId ?: 0)) + 1 else entradasCant
+            val factorWidth = width / ((entradas * 2) + 1)
+            val indices = if ((minimoId ?: 0) > 100) {
+                (minimoId ?: 0)..(maximoId ?: 0) + 1
+            } else {
+                1..entradasCant
+            }
+            for (i in 1..10) {
+                drawLine(
+                    Color.White.copy(alpha = 0.5f),
+                    Offset(100f, height - (((maximo * i) / 10) * factorHeight).toFloat()),
+                    Offset(
+                        this.size.width,
+                        height - (((maximo * i) / 10) * factorHeight).toFloat()
+                    ),
+                    strokeWidth = 2f
+                )
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = textoGraficas((maximo.toFloat() * i) / 10),
+                    style = TextStyle(
+                        fontSize = 10.sp,
+                        color = Color.White
+                    ),
+                    topLeft = Offset(
+                        x = 0f,
+                        y = height - (((maximo * i) / 10) * factorHeight).toFloat()
+                    )
+                )
+            }
+            drawLine(
+                myGreen,
+                Offset(100f, height - (presupuesto * factorHeight).toFloat()),
+                Offset(this.size.width, height - (presupuesto * factorHeight).toFloat()),
+                strokeWidth = 5f
+            )
+            drawText(
+                textMeasurer = textMeasurer,
+                text = textoGraficas(presupuesto.toFloat()),
+                style = TextStyle(
+                    fontSize = 10.sp,
+                    color = myGreen,
+                    background = Color.Black
+                ),
+                topLeft = Offset(
+                    x = 0f,
+                    y = height - (presupuesto * factorHeight).toFloat()
+                )
+            )
+            indices.forEachIndexed { index, ind ->
+                val entradasF = agrupados.firstOrNull { ag -> ag.first == ind }?.second
+                drawnRects.add(Pair(
+                    Rect(Offset(((index * 2) + 1) * factorWidth + 100f, 0f), Size(factorWidth, this.size.height)),
+                    ind))
+                if (entradasF != null) {
+                    var altura = height
+                    entradasF.forEach { en ->
+                        val alturaFin = altura - (en.total * factorHeight).toFloat()
+                        drawRect(
+                            en.color(),
+                            Offset(((index * 2) + 1) * factorWidth + 100f, alturaFin),
+                            Size(factorWidth, (en.total * factorHeight).toFloat())
+                        )
+                        altura = alturaFin
+                    }
+                    drawText(
+                        textMeasurer = textMeasurer,
+                        text = if (ind < 100) DecimalFormat("00").format(ind) else "$ind",
+                        style = TextStyle(
+                            fontSize = if (entradasCant > 20) 6.sp else 12.sp,
+                            color = Color.White
+                        ),
+                        topLeft = Offset(
+                            x = if (ind < 100) ((index * 2) + 1) * factorWidth + 100f else ((index * 2) + 1.3f) * factorWidth + 100f,
+                            y = height + 5f
+                        )
+                    )
+                }
+            }
+            drawLine(
+                Color.White,
+                Offset(100f, height),
+                Offset(this.size.width, height),
+                strokeWidth = 5f
+            )
+            drawLine(Color.White, Offset(100f, 0f), Offset(100f, height), strokeWidth = 5f)
         }
     }
 }
 
 @Composable
-fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDetalles: ()-> Unit, onEnter: () -> Unit){
+fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDetalles: ()-> Unit, onEnter: () -> Unit, recortar: Float){
     val totalCoste = agrupados.sumOf { ag -> ag.total }
     var inicio = 90f
     OutlinedCard(onClick = { onEnter() }, border = BorderStroke(1.dp, if(totalCoste > presupuesto) myRed else Color.White)) {
@@ -518,9 +641,9 @@ fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDe
                 .padding(0.dp, 10.dp, 0.dp, 0.dp)
                 .fillMaxWidth(), textAlign = TextAlign.Center, style = TextStyle(fontWeight = FontWeight.Bold)
             )
-            Text(text=if(totalCoste > presupuesto) DecimalFormat("0.00€").format(presupuesto - totalCoste) else "+${DecimalFormat("0.00€").format(presupuesto - totalCoste)}", modifier = Modifier
+            Text(text=if(totalCoste > (presupuesto-recortar)) DecimalFormat("0.00€").format((presupuesto-recortar) - totalCoste) else "+${DecimalFormat("0.00€").format((presupuesto-recortar) - totalCoste)}", modifier = Modifier
                 .fillMaxWidth(), textAlign = TextAlign.Center,
-                color = if(totalCoste > presupuesto) myRed else myGreen)
+                color = if(totalCoste > (presupuesto-recortar)) myRed else myGreen)
         }
     }
 }

@@ -69,13 +69,17 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.kiwi.finanzas.db.Agrupado
 import com.kiwi.finanzas.db.Tipo
+import com.kiwi.finanzas.formatAsCurrency
 import com.kiwi.finanzas.getPreference
 import com.kiwi.finanzas.getValidatedNumber
 import com.kiwi.finanzas.isLeapYear
@@ -123,56 +127,10 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
             gastosNull = entrada.plus(gastosNull ?: listOf())
         }
     }
-    val gastosPeriodo by when(periodo){
-        1f -> {
-            daoEntradas.getGastoPeriodo(
-                ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31) + currentTime.dayOfMonth
+    val agrupadosPeriodo by daoEntradas.getTotalesPeriodo(
+        ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31),
+        ((currentTime.year-1)*372) + ((currentTime.monthValue)*31),
             ).collectAsState(initial = emptyList())
-        }
-        2f -> {
-            val timePeriod = currentTime.minusDays(currentTime.dayOfWeek.value - 1L)
-            daoEntradas.getGastoPeriodo(
-                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
-            ).collectAsState(initial = emptyList())
-        }
-        3f -> {
-            val timePeriod = currentTime.minusDays((currentTime.dayOfWeek.value - 1L)+7L)
-            daoEntradas.getGastoPeriodo(
-                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
-            ).collectAsState(initial = emptyList())
-        }
-        else -> {
-            val timePeriod = currentTime.minusDays((currentTime.dayOfMonth.toLong()))
-            daoEntradas.getGastoPeriodo(
-                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
-            ).collectAsState(initial = emptyList())
-        }
-    }
-    val agrupadosPeriodo by when(periodo){
-        1f -> {
-            daoEntradas.getTotalesPeriodo(
-                ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31) + currentTime.dayOfMonth
-            ).collectAsState(initial = emptyList())
-        }
-        2f -> {
-            val timePeriod = currentTime.minusDays(currentTime.dayOfWeek.value - 1L)
-            daoEntradas.getTotalesPeriodo(
-                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
-            ).collectAsState(initial = emptyList())
-        }
-        3f -> {
-            val timePeriod = currentTime.minusDays((currentTime.dayOfWeek.value - 1L)+7L)
-            daoEntradas.getTotalesPeriodo(
-                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
-            ).collectAsState(initial = emptyList())
-        }
-        else -> {
-            val timePeriod = currentTime.minusDays((currentTime.dayOfMonth.toLong()))
-            daoEntradas.getTotalesPeriodo(
-                ((timePeriod.year-1)*372) + ((timePeriod.monthValue - 1)*31) + timePeriod.dayOfMonth,
-            ).collectAsState(initial = emptyList())
-        }
-    }
     if(tiposNull != null && gastosNull != null && agrupadosNull != null) {
         val agrupados = agrupadosNull!!
         val tipos = tiposNull!!
@@ -181,33 +139,8 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         var inicio = 90f
         val total1 = agrupados.filter { it.total > 0 }.sumOf { it.total }
         val total3 = agrupadosPeriodo.sumOf { it.total }
-        val gastoMax = when (periodo) {
-            1f -> {
-                getPreference(context, "maxDia") / (currentTime.month.length(
-                    isLeapYear(
-                        currentTime.year
-                    )
-                ))
-            }// Dias
-            2f -> {
-                getPreference(context, "maxDia") / ((currentTime.month.length(
-                    isLeapYear(
-                        currentTime.year
-                    )
-                )) / 7f)
-            }// Semanas
-            3f -> {
-                getPreference(context, "maxDia") / ((currentTime.month.length(
-                    isLeapYear(
-                        currentTime.year
-                    )
-                )) / 15f)
-            }// Quincena
-            else -> {
-                getPreference(context, "maxDia")
-            }
-        }
-        val total2 = gastosPeriodo.sumOf { it.cantidad }
+        val gastoMax = getPreference(context, "maxDia")
+        val total2 = agrupadosPeriodo.sumOf { it.total }
         val totalDegree = (total2 / gastoMax) * -360f
         // Detectar si el ítem de mayor índice (último en la lista) es visible
         val endReached by remember {
@@ -221,7 +154,6 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         // Disparar el evento
         LaunchedEffect(endReached) {
             if (endReached) {
-                Log.d("DB", "Recargar")
                 addEntradas()
             }
         }
@@ -490,14 +422,15 @@ fun DialogDetalles(onDismis: () -> Unit = {}, agrupadosComp: List<Agrupado> = li
 fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) -> Unit = {}, onEdit: (entrada: Entrada) -> Unit = {}, onCreate: (entrada: Entrada) -> Unit = {}, entrada: Entrada?, tipos: List<Tipo> = listOf()){
     var text by remember { mutableStateOf(entrada?.concepto ?: "") }
     var expanded by remember { mutableStateOf(false) }
-    var amount by remember { mutableStateOf((entrada?.cantidad ?: 0.0f).toString()) }
-    var tipo by remember { mutableStateOf(tipos.find { t -> t.id == entrada?.tipo}?.nombre ?: "Tipo") }
+    var tipoDefault = stringResource(R.string.tipo)
+    var amount by remember { mutableStateOf(formatAsCurrency(DecimalFormat("0.00").format(entrada?.cantidad ?: 0.0f))) }
+    var tipo by remember { mutableStateOf(tipos.find { t -> t.id == entrada?.tipo}?.nombre ?: tipoDefault) }
     var tipoColor by remember { mutableStateOf(tipos.find { t -> t.id == entrada?.tipo}?.color() ?: Color.Gray) }
     var textColor by remember { mutableStateOf(tipos.find { t -> t.id == entrada?.tipo}?.textColor() ?: Color.Black) }
     var tipoId by remember { mutableIntStateOf(entrada?.tipo ?: 0) }
     val currentTime = LocalDateTime.now()
     var year by remember { mutableIntStateOf(entrada?.anno ?: currentTime.year) }
-    var month by remember { mutableIntStateOf((entrada?.mes ?: (currentTime.monthValue + 1)) - 1) }
+    var month by remember { mutableIntStateOf(entrada?.mes ?: currentTime.monthValue) }
     var day by remember { mutableIntStateOf(entrada?.dia ?: currentTime.dayOfMonth) }
 
     val datePickerDialog = DatePickerDialog(
@@ -521,7 +454,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                             },
                             placeholder = {
                                 Text(
-                                    text = "Concepto",
+                                    text = stringResource(R.string.concepto),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             },
@@ -561,17 +494,21 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                                 Text(text = tipo, color = textColor)
                             }
                             Spacer(modifier = Modifier.width(5.dp))
+                            val textFieldValue = remember(amount) {
+                                TextFieldValue(
+                                    text = amount,
+                                    selection = TextRange(amount.length) // Cursor al final
+                                )
+                            }
                             OutlinedTextField(
                                 modifier = Modifier.weight(0.6F),
-                                value = amount,
-                                onValueChange = {
-                                    val valor = getValidatedNumber(it)
-                                    val valorNum = if (valor == "") 0f else valor.toFloat()
-                                    amount = valorNum.toString()
+                                value = textFieldValue,
+                                onValueChange = { newText ->
+                                    amount = formatAsCurrency(newText.text)
                                 },
                                 placeholder = {
                                     Text(
-                                        text = "Precio"
+                                        text = stringResource(R.string.precio)
                                     )
                                 },
                                 shape = RoundedCornerShape(16.dp),
@@ -590,7 +527,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                             TextButton(onClick = {
                                 datePickerDialog.show()
                             }, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)) {
-                                Text("$day-${month + 1}-$year", color = Color.White)
+                                Text("$day-${month}-$year", color = Color.White)
                             }
                         }
                     }
@@ -602,7 +539,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                                 onDelete(entrada.id)
                             }
                         }, colors = ButtonDefaults.buttonColors(containerColor = myRed)) {
-                            Text("Borrar", color = Color.White)
+                            Text(stringResource(R.string.borrar), color = Color.White)
                         }
                         Spacer(modifier = Modifier.width(50.dp))
                     }
@@ -613,7 +550,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                                     Entrada(
                                         concepto = text,
                                         anno = year,
-                                        mes = month + 1,
+                                        mes = month,
                                         dia = day,
                                         hora = entrada.hora,
                                         min = entrada.min,
@@ -636,7 +573,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                             }
                         }
                     }, colors = ButtonDefaults.buttonColors(containerColor = myBlue)) {
-                        Text("OK", color = Color.White)
+                        Text(stringResource(R.string.ok), color = Color.White)
                     }
                 }
             }
