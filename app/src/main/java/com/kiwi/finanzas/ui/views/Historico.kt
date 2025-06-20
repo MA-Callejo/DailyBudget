@@ -59,6 +59,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -311,10 +314,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 }
             }
         }) { paddingValues ->
-            Column(modifier = Modifier
-
-                .padding(paddingValues)) {
-
+            Column(modifier = Modifier.padding(paddingValues)) {
                 if(entradas != null) {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if(entradas != null) {
@@ -367,9 +367,12 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                     }
                 }
                 if(agrupados != null){
+                    if(showCharts){
+                        graficas(agrupados!!)
+                    }
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if(agrupados != null) {
-                            items(agrupados!!.chunked(2)) { agrupadosDos ->
+                            items(agrupados!!.filter { ag -> ag.second.isNotEmpty() }.chunked(2)) { agrupadosDos ->
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     agrupadosDos.forEach { agrupados ->
                                         Box(
@@ -378,13 +381,25 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                                 .padding(8.dp)
                                         ) {
                                             ItemView(
+                                                agrupados = agrupados.second,
                                                 titulo = if (mesAct != null)
                                                         "Dia ${agrupados.first}"
                                                     else if (annoAct != null)
                                                         Month.of(agrupados.first).name
                                                     else
                                                         "Year ${agrupados.first}",
-                                                onDetalles = { detallesShow = it },
+                                                presupuesto = if (mesAct != null) presupuesto / Month.of(
+                                                    mesAct!!
+                                                ).length(
+                                                    isLeapYear(annoAct!!)
+                                                ) else if (annoAct != null) presupuesto else presupuesto * 12f,
+                                                onDetalles = {
+                                                    if (agrupados.second.isNotEmpty()) {
+                                                        showDetalles = true
+                                                        detallesConsulta =
+                                                            agrupados
+                                                    }
+                                                },
                                                 onEnter = {
                                                     if (mesAct != null) {
                                                         changeFecha(annoAct, mesAct, agrupados.first)
@@ -405,108 +420,6 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                             ) { /* Empty Box to fill the space */ }
                                         }
                                     }
-                                    //--------------------------------------------------------------------------
-                                    val totalCoste = agrupados.second.sumOf { it2 -> it2.total }
-                                    var inicio = 90f
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(10.dp, 3.dp),
-                                        onClick = {
-                                            if (mesAct != null) {
-                                                changeFecha(annoAct, mesAct, agrupados.first)
-                                            } else {
-                                                if (annoAct != null) {
-                                                    changeFecha(annoAct, agrupados.first, null)
-                                                } else {
-                                                    changeFecha(agrupados.first, null, null)
-                                                }
-                                            }
-                                        }
-                                    ) {
-                                        Row {
-                                            Column() {
-                                                Text(
-                                                    text = if (mesAct != null)
-                                                        "Dia ${agrupados.first}"
-                                                    else if (annoAct != null)
-                                                        Month.of(agrupados.first).name
-                                                    else
-                                                        "Year ${agrupados.first}",
-                                                    modifier = Modifier.padding(2.dp)
-                                                )
-                                                Row() {
-                                                    val presupuestoTot =
-                                                        if (mesAct != null) presupuesto / Month.of(
-                                                            mesAct!!
-                                                        ).length(
-                                                            isLeapYear(annoAct!!)
-                                                        ) else if (annoAct != null) presupuesto else presupuesto * 12f
-                                                    Text(
-                                                        text = DecimalFormat("0.00€").format(
-                                                            totalCoste
-                                                        ),
-                                                        modifier = Modifier
-                                                            .padding(10.dp, 5.dp),
-                                                        style = TextStyle(
-                                                            fontSize = 24.sp,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                    )
-                                                    Text(
-                                                        text = DecimalFormat("0.00€").format(
-                                                            presupuestoTot - totalCoste
-                                                        ),
-                                                        modifier = Modifier
-                                                            .padding(10.dp, 5.dp),
-                                                        style = TextStyle(
-                                                            fontSize = 24.sp,
-                                                            fontWeight = FontWeight.Bold
-                                                        ),
-                                                        color = if (totalCoste > presupuestoTot) myRed else myGreen
-                                                    )
-                                                }
-                                            }
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .padding(8.dp)
-                                            ) {
-                                                Canvas(
-                                                    modifier = Modifier
-                                                        .width(100.dp)
-                                                        .height(100.dp)
-                                                        .pointerInput(Unit) {
-                                                            detectTapGestures(
-                                                                onTap = {
-                                                                    if (agrupados.second.isNotEmpty()) {
-                                                                        showDetalles = true
-                                                                        detallesConsulta =
-                                                                            agrupados
-                                                                    }
-                                                                }
-                                                            )
-                                                        }
-
-                                                ) {
-                                                    drawArc(Color.Gray, 0f, 360f, true)
-                                                    agrupados.second.filter { it2 -> it2.total > 0 }
-                                                        .forEach {
-                                                            val fin =
-                                                                ((it.total / totalCoste) * 360f).toFloat()
-                                                            drawArc(
-                                                                it.color(),
-                                                                -1f * inicio,
-                                                                -1f * fin,
-                                                                true
-                                                            )
-                                                            inicio += fin
-                                                        }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
                                 }
                             }
                         }
@@ -527,309 +440,54 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     }
 }
 
-/*
 @Composable
-fun HistoricoOld(navController: NavController, anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, changeFechas: (anno: Int, mes: Int, dia: Int) -> Unit) {
-    val tipos by daoTipos.getAll().collectAsState(initial = emptyList())
-    var showEdit by remember { mutableStateOf(false) }
-    var detallesShow by remember { mutableStateOf(false) }
-    val currentTime = LocalDateTime.now()
-    var entradaEdit: Entrada? by remember { mutableStateOf(null) }
-    var diaExpanded by remember { mutableStateOf(false) }
-    var mesExpanded by remember { mutableStateOf(false) }
-    var annoExpanded by remember { mutableStateOf(false) }
-    var agrupados by remember { mutableStateOf(true) }
-    var expandedTipos by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    var text by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf("Todos") }
-    var tipoId: Int? by remember { mutableStateOf(null) }
-    var tipoColor by remember { mutableStateOf(Color.Gray) }
-    var textColor by remember { mutableStateOf(Color.White) }
-    val annos by daoEntradas.getAnnos().collectAsState(initial = emptyList())
-    val meses by daoEntradas.getMeses(anno ?: 0).collectAsState(initial = emptyList())
-    val dias by daoEntradas.getDias(anno = anno ?: 0, mes = mes ?: 0).collectAsState(initial = emptyList())
-    val entradas by if(anno != null){
-        if(mes != null){
-            if(dia != null){
-                daoEntradas.getAllDiaFiltro(mes!!, dia!!, anno!!, "%$text%")
-                    .collectAsState(initial = emptyList())
-            }else {
-                daoEntradas.getAllMesFiltro(mes!!, anno!!, "%$text%")
-                    .collectAsState(initial = emptyList())
-            }
-        }else {
-            daoEntradas.getAllAnnoFiltro(anno!!, "%$text%").collectAsState(initial = emptyList())
-        }
-    }else{
-        daoEntradas.getAllFiltro("%$text%").collectAsState(initial = emptyList())
-    }
-    val grouped = if(anno != null){
-        if(mes != null){
-            if(dias.size > 0) {
-                (1..dias.max()).toList()
-            }else{
-                listOf()
-            }
-        }else {
-            if(meses.size > 0) {
-                (meses.min()..meses.max()).toList()
-            }else{
-                listOf()
-            }
-        }
-    }else{
-        if(annos.size > 0){
-            (annos.min()..annos.max()).toList()
+fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>){
+    Canvas(modifier = Modifier.padding(20.dp).fillMaxWidth().height(200.dp)){
+        val height = this.size.height
+        val width = this.size.width
+        val maximo = agrupados.maxOf { ag -> ag.second.sumOf { ags -> ags.total } }
+        val factorHeight = height / maximo
+        val minimoId = agrupados.minOfOrNull { ag -> ag.first }
+        val maximoId = agrupados.maxOfOrNull { ag -> ag.first }
+        val entradas = if((minimoId ?: 0) > 100) ((maximoId ?: 0) - (minimoId ?: 0)) else (maximoId ?: 0)
+        val factorWidth = width / (entradas * 2)
+        val indices = if((minimoId ?: 0) > 100){
+            (minimoId ?: 0)..(maximoId ?: 0)
         }else{
-            listOf()
+            0..(maximoId ?: 0)
         }
-    }
-
-    val createFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.bufferedWriter().use { writer ->
-                    writer.write("Concepto,Fecha,Importe,Tipo")
-                    writer.newLine()
-                    entradas.forEach { entry ->
-                        writer.write("${entry.concepto},${entry.anno}-${entry.mes}-${entry.dia},${entry.cantidad},${tipos.find { t -> t.id == entry.tipo }?.nombre}")
-                        writer.newLine()
-                    }
-                }
-            }
-        }
-    }
-
-    if(showEdit){
-        if(entradaEdit != null) {
-            DialogEdit(context, entrada = entradaEdit!!, onDismis = {
-                showEdit = false
-                entradaEdit = null
-            }, onEdit = {ent ->
-                coroutineScope.launch {
-                    daoEntradas.update(ent)
-                    showEdit = false
-                    entradaEdit = null
-                }
-            }, tipos = tipos,
-                onDelete = {id ->
-                    coroutineScope.launch {
-                        daoEntradas.delete(id)
-                        showEdit = false
-                        entradaEdit = null
-                    }
-                })
-        }
-    }
-    Column(modifier = Modifier.blur(if (showEdit || detallesShow) 16.dp else 0.dp)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp, 50.dp, 20.dp, 20.dp)
-        ) {
-
-            Row (modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)){
-                Column (modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()){
-                    OutlinedButton(modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                        onClick = {
-                            navController.navigate("historico/ / / ")
-                        }) {
-                        Text(text = (if(anno!=null) anno.toString() else "Todos"))
-                    }
-                }
-                Column (modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()){
-                    OutlinedButton(modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                        onClick = {
-                            navController.navigate("historico/"+anno.toString()+"/ / ")
-                        }) {
-                        Text(text = (if(mes!=null) Mes.obtenerPorIndice(mes!! - 1, anno!!).nombre else "Todos"))
-                    }
-                }
-                Column (modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()){
-                    OutlinedButton(modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                        onClick = {
-                            navController.navigate("historico/"+anno.toString()+"/"+mes.toString()+"/ ")
-                        }) {
-                        Text(text = (if(dia!=null) dia.toString() else "Todos"))
-                    }
-                }
-            }
-            if(!(agrupados)) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    DropdownMenu(expanded = expandedTipos,
-                        onDismissRequest = { expandedTipos = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Todos", color = Color.White) },
-                            onClick = {
-                                expandedTipos = false
-                                tipo = "Todos"
-                                tipoId = null
-                                tipoColor = Color.Gray
-                            },
-                            modifier = Modifier.background(Color.Gray)
-                        )
-                        tipos.forEach {
-                            DropdownMenuItem(
-                                text = { Text(it.nombre, color = it.textColor()) },
-                                onClick = {
-                                    expandedTipos = false
-                                    tipo = it.nombre
-                                    tipoId = it.id
-                                    tipoColor = it.color()
-                                },
-                                modifier = Modifier.background(it.color())
-                            )
-                        }
-                    }
-                    OutlinedButton(
-                        colors = ButtonDefaults.buttonColors(containerColor = tipoColor),
-                        onClick = { expandedTipos = true }) {
-                        Text(text = tipo, color = textColor)
-                    }
-                    Spacer(modifier = Modifier.width(5.dp))
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = text,
-                        onValueChange = {
-                            text = it
-                        },
-                        placeholder = {
-                            Text(
-                                text = "Buscador",
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        maxLines = 1,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Done,
-                            capitalization = KeyboardCapitalization.Sentences
-                        ),
-                    )
-                }
-            }
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(1f)
-            ) {
-                if(dia == null){
-                    items(grouped.chunked(2)){ rowItems ->
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            for (item in rowItems) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(8.dp)
-                                ) {
-                                    ItemView(if(anno == null) item else anno, if(mes == null) item else mes, item, if(anno == null) 1 else if(mes==null) 2 else 3,
-                                        onDetalles = {detallesShow = it},
-                                        daoEntradas = daoEntradas, getPreference(context,"maxDia"),
-                                        onEnter = {
-                                            if(dia == null){
-                                                navController.navigate("historico/"+anno.toString()+"/"+mes.toString()+"/"+it.toString())
-                                            }
-                                            if(mes == null){
-                                                navController.navigate("historico/"+anno.toString()+"/"+it.toString()+"/ ")
-                                            }
-                                            if(anno == null){
-                                                navController.navigate("historico/"+it.toString()+"/ / ")
-                                            }
-                                        })
-                                }
-                            }
-                            if (rowItems.size == 1) {
-                                Box(modifier = Modifier
-                                    .weight(1f)
-                                    .padding(8.dp)) { /* Empty Box to fill the space */ }
-                            }
-                        }
-                    }
-                }else {
-                    items(if (tipoId != null) entradas.filter { it.tipo == tipoId } else entradas) { it ->
-                        Card(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp, 3.dp),
-                            colors = CardDefaults.cardColors(containerColor = tipos.first { t -> it.tipo == t.id }
-                                .color()),
-                            onClick = {
-                                entradaEdit = it
-                                showEdit = true
-                            }
-                        ) {
-                            Text(
-                                text = it.concepto,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(10.dp, 5.dp),
-                                style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
-                                color = tipos.first { t -> t.id == it.tipo }.textColor(),
-                            )
-                            Row {
-                                Text(
-                                    text = DecimalFormat("0.00€").format(it.cantidad),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f)
-                                        .padding(10.dp, 5.dp),
-                                    style = TextStyle(
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = if (it.cantidad > 0) myRed else myGreen
-                                )
-                                Text(
-                                    text = "${it.dia}-${it.mes}-${it.anno}",
-                                    modifier = Modifier.padding(2.dp),
-                                    color = tipos.first { t -> t.id == it.tipo }.textColor(),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Row {
-                IconButton(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(10.dp), onClick = { createFileLauncher.launch("registros.csv") }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.csv),
-                        contentDescription = "",
-                        tint = Color.White
-                    )
+        drawRect(Color.Green, Offset(0f, 0f), this.size)
+        drawRect(Color.White, Offset(0f, this.size.height), Size(this.size.width, 5f))
+        indices.forEachIndexed { index, ind ->
+            val entradas = agrupados.firstOrNull { ag -> ag.first == ind }?.second
+            if(entradas != null){
+                var altura = 0f
+                entradas.forEach { en ->
+                    val alturaFin = altura+(en.total * factorHeight).toFloat()
+                    drawRect(en.color(), Offset(index*2*factorWidth, width - alturaFin), Size(factorWidth, alturaFin))
+                    altura = alturaFin
                 }
             }
         }
     }
 }
-*/
+
 @Composable
-fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: ()-> Unit, onEnter: () -> Unit){
-    OutlinedCard(onClick = { onEnter() }, border = BorderStroke(2.dp)) {
+fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDetalles: ()-> Unit, onEnter: () -> Unit){
+    val totalCoste = agrupados.sumOf { ag -> ag.total }
+    var inicio = 90f
+    OutlinedCard(onClick = { onEnter() }, border = BorderStroke(1.dp, if(totalCoste > presupuesto) myRed else Color.White)) {
         Column(modifier = Modifier
             .padding(10.dp)
             .fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
+            Text(text = titulo,
+                modifier = Modifier
+                    .padding(10.dp, 5.dp),
+                style = TextStyle(
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                ))
+            Spacer(modifier = Modifier.height(10.dp))
             Canvas(
                 modifier = Modifier
                     .width(100.dp)
@@ -837,29 +495,32 @@ fun ItemView(anno: Int?, mes: Int?, dia: Int?, tipo: Int = 0, onDetalles: ()-> U
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = {
-                                detallesShow = true
-                                onDetalles(true)
+                                onDetalles()
                             }
                         )
                     }
-
             ) {
                 drawArc(Color.Gray, 0f, 360f, true)
-                agrupados.filter { it.total > 0 }.forEach {
-                    val fin = ((it.total / maxTotal) * 360f).toFloat()
-                    Log.d("ARC", "Dia ${dia} Tipo ${it.nombre}: ${it.total} / $maxTotal -> $inicio + $fin")
-                    drawArc(it.color(), -1f * inicio, -1f * fin, true)
-                    inicio += fin
-                }
+                agrupados.filter { it2 -> it2.total > 0 }
+                    .forEach {
+                        val fin =
+                            ((it.total / totalCoste) * 360f).toFloat()
+                        drawArc(
+                            it.color(),
+                            -1f * inicio,
+                            -1f * fin,
+                            true
+                        )
+                        inicio += fin
+                    }
             }
-            Text(text=if(tipo == 1) anno.toString() else if (tipo == 2) Mes.obtenerPorIndice(mes!! - 1, anno!!).nombre else dia.toString(), modifier = Modifier
+            Text(text=DecimalFormat("0.00€").format(totalCoste), modifier = Modifier
                 .padding(0.dp, 10.dp, 0.dp, 0.dp)
                 .fillMaxWidth(), textAlign = TextAlign.Center, style = TextStyle(fontWeight = FontWeight.Bold)
             )
-            Log.d("GASTO", "$dia : $resultado")
-            Text(text=if(resultado >= 0) String.format("%.2f€", resultado) else String.format("%.2f€", resultado*-1f), modifier = Modifier
+            Text(text=if(totalCoste > presupuesto) DecimalFormat("0.00€").format(presupuesto - totalCoste) else "+${DecimalFormat("0.00€").format(presupuesto - totalCoste)}", modifier = Modifier
                 .fillMaxWidth(), textAlign = TextAlign.Center,
-                color = if(resultado >= 0) myRed else myGreen)
+                color = if(totalCoste > presupuesto) myRed else myGreen)
         }
     }
 }
