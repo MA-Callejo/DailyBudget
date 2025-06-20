@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DailyBudget</string>
     <string name="title_activity_main">DailyBudget</string>
@@ -5,16 +6,16 @@
     <string name="tipo">Tipo</string>
     <string name="precio">Precio</string>
     <string name="borrar">Borrar</string>
-    <string name="ok">OK</string>
+    <string name="ok">Listo</string>
     <string name="gasto_mensual">Gasto mensual</string>
+    <string name="setting">Ajustes</string>
+    <string name="home">Inicio</string>
+    <string name="todos">Todo</string>
+    <string name="dia">Día</string>
+    <string name="year">Año</string>
     <string name="valor">Valor</string>
     <string name="mostrar_eliminados">Mostrar eliminados</string>
     <string name="nombre">Nombre</string>
     <string name="restaurar">Restaurar</string>
-    <string name="historic">Historic</string>
-    <string name="setting">Setting</string>
-    <string name="home">Home</string>
-    <string name="todos">TODOS</string>
-    <string name="dia">Dia</string>
-    <string name="year">Year</string>
+    <string name="historic">Histórico</string>
 </resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DailyBudget</string>
+    <string name="title_activity_main">DailyBudget</string>
+    <string name="borrar">Delete</string>
+    <string name="ok">Ok</string>
+    <string name="setting">Sttings</string>
+    <string name="home">Home</string>
+    <string name="todos">All</string>
+    <string name="dia">Day</string>
+    <string name="year">Year</string>
+    <string name="concepto">Concept</string>
+    <string name="tipo">Type</string>
+    <string name="precio">Price</string>
+    <string name="gasto_mensual">Monthly expense</string>
+    <string name="valor">Worth</string>
+    <string name="mostrar_eliminados">"Show deleted  "</string>
+    <string name="nombre">Name</string>
+    <string name="restaurar">Restore</string>
+    <string name="historic">Historic</string>
+</resources>

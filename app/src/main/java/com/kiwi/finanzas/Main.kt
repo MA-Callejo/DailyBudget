@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode.Companion.Screen
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -65,24 +66,23 @@ fun Greeting(context: Context) {
     val database = DataBase.getDatabase(context)
     val daoEntradas = database.entryDao()
     val daoTipos = database.typeDao()
-    val navController = rememberNavController()
     val currentTime = LocalDateTime.now()
     var anno: Int? = currentTime.year
     var mes: Int? = currentTime.monthValue
     var dia: Int? = null
     val navigationItems = listOf(
         NavigationItem(
-            title = "Home",
+            title = stringResource(R.string.home),
             icon = Icons.Default.Home,
             route = "home"
         ),
         NavigationItem(
-            title = "Historic",
+            title = stringResource(R.string.historic),
             icon = Icons.Default.DateRange,
             route = "historico"
         ),
         NavigationItem(
-            title = "Setting",
+            title = stringResource(R.string.setting),
             icon = Icons.Default.Settings,
             route = "settings"
         )
