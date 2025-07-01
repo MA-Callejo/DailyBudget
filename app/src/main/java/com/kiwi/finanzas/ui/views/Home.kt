@@ -106,12 +106,12 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
     var showDetalles by remember { mutableStateOf(false) }
     var showEdit by remember { mutableStateOf(false) }
     var addNew by remember { mutableStateOf(false) }
-    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorial").toInt() % 1000) }
-    val showTutorial = tutorialStep == 2
+    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorialHome").toInt() % 1000) }
     var entradaEdit: Entrada? by remember { mutableStateOf(null) }
     val scope = rememberCoroutineScope()
     val periodo by remember { mutableStateOf(if(getPreference(context,"periodo") >= 0f) getPreference(context,"periodo") else 1f) }
     val agrupadosNull by daoEntradas.getTotales(currentTime.monthValue, currentTime.year).collectAsState(initial = null)
+    val showTutorial = (tutorialStep < 2) || (((agrupadosNull ?: listOf<Entrada>()).isNotEmpty()) && tutorialStep == 2) || (((agrupadosNull ?: listOf<Entrada>()).isNotEmpty()) && tutorialStep == 3)
     LaunchedEffect(Unit) {
         scope.launch{
             gastosNull = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, 10, 0)
@@ -166,8 +166,8 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         if (showTutorial){
             DialogTutorial(tutorialStep, onChange = {
                 tutorialStep++
-                savePreference(context, "tutorial", tutorialStep.toFloat())
-            })
+                savePreference(context, "tutorialHome", tutorialStep.toFloat())
+            }, 1)
         }
         if (showDetalles) {
             DialogDetalles(onDismis = {
@@ -218,7 +218,16 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                 .padding(20.dp, 50.dp, 20.dp, 20.dp)) {
                 Row(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 20.dp)) {
                     if (agrupados.isNotEmpty()) {
-                        Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        Column(modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .let {
+                                if(tutorialStep == 2){
+                                    it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                                }else{
+                                    it
+                                }
+                            }) {
                             Canvas(
                                 modifier = Modifier
                                     .width(100.dp)
@@ -243,12 +252,23 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                                 text = DecimalFormat("0.00€").format(total3),
                                 color = if (total3 >= getPreference(context, "maxDia")) myRed else if(total3 >= (0.8f * getPreference(context, "maxDia"))) myYellow else myGreen,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 5.dp),
                                 style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
                             )
                         }
                     }
-                    Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    Column(modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .let {
+                            if(tutorialStep == 0){
+                                it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                            }else{
+                                it
+                            }
+                        }) {
                         Canvas(
                             modifier = Modifier
                                 .width(100.dp)
@@ -262,7 +282,9 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                             text = DecimalFormat("0.00€").format(gastoMax - total2),
                             color = if (gastoMax - total2 < 0) myRed else myGreen,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 5.dp),
                             style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         )
                     }
@@ -277,7 +299,14 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(10.dp, 3.dp),
+                                    .padding(10.dp, 3.dp)
+                                    .let {
+                                        if(tutorialStep == 3){
+                                            it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                                        }else{
+                                            it
+                                        }
+                                    },
                                 colors = CardDefaults.cardColors(containerColor = tipos.first { t -> it.tipo == t.id }
                                     .color()),
                                 onClick = {
@@ -321,11 +350,13 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                     IconButton({
                         addNew = true
                     }, modifier =
-                        if(tutorialStep != 2) Modifier.align(Alignment.BottomEnd)
-                        else Modifier
-                            .align(Alignment.BottomEnd)
-                            .border(10.dp, MaterialTheme.colorScheme.tertiary)
-                            .padding(10.dp)) {
+                        Modifier.align(Alignment.BottomEnd).let {
+                            if(tutorialStep == 1){
+                                it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                            }else{
+                                it
+                            }
+                        }) {
                         Icon(
                             Icons.Default.AddCircle,
                             contentDescription = "",
@@ -351,27 +382,30 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
 }
 
 @Composable
-fun DialogTutorial(tutorialStep: Int, onChange: () -> Unit) {
-    val titulo = when(tutorialStep){
+fun DialogTutorial(tutorialStep: Int, onChange: () -> Unit, tipo: Int) { //0: Main, 1: Home, 2: Historic, 3: Settings
+    val indice = (10*tipo) + tutorialStep
+    val titulo = when(indice){
         0 -> "Saludos"
         1 -> "Navegación"
-        2 -> "Añadir gasto"
-        3 -> "Tu presupuesto"
-        4 -> "Ajustes"
+        10 -> "Gasto total"
+        11 -> "Añadir gasto"
+        12 -> "Desglose de gastos"
+        13 -> "Entradas de datos"
         else -> ""
     }
-    val texto = when(tutorialStep){
+    val texto = when(indice){
         0 -> "Esta es la pantalla de inicio de DailyBudget.\nAquí podras ver rapidamente los gastos de este mes así como el total de ellos."
         1 -> "En la parte inferior de la pantalla encontraras un menu de navegacion con el que podras ir al historico de gastos y a la configuracion de la app."
-        2 -> "En la esquina inferior encontraras el siguiente icono para añadir nuevos gastos. Recuerda hacerlo cada vez que pagues algo."
-        3 -> "Aqui sale el presupuesto que aun puedes gastar este mes.\nPuedes cambiarlo en la ventana de ajustes"
-        4 -> ""
+        10 -> "Aqui sale el presupuesto que aun puedes gastar este mes.\nPuedes cambiarlo en la ventana de ajustes."
+        11 -> "En la esquina inferior encontraras el boton para añadir nuevos gastos. Recuerda hacerlo cada vez que pagues algo."
+        12 -> "Aqui sale el gasto de este mes agrupado por tipo.\nPuedes gestionar estos tipos en la ventana de ajustes."
+        13 -> "Estas son las entradas de gastos. Reflejan cada movimiento que has realizado.\nPuedes pulsar sobre una entrada de gasto para borrarla o modificarla."
         else -> ""
     }
     AlertDialog(confirmButton = {
         TextButton(onClick = {
             onChange()
-        }) { Text("Entendido") }
+        }) { Text(stringResource(R.string.entendido)) }
     }, text = {
         Text(texto)
     }, onDismissRequest = {
@@ -379,7 +413,9 @@ fun DialogTutorial(tutorialStep: Int, onChange: () -> Unit) {
     }, title = {
         Text(
             titulo,
-            style = MaterialTheme.typography.titleMedium
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.titleLarge
         )
     })
 }

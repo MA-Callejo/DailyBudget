@@ -95,13 +95,13 @@ fun Greeting(context: Context) {
     val selectedNavigationIndex = rememberSaveable {
         mutableIntStateOf(0)
     }
-    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorial").toInt() % 1000) }
+    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorialMain").toInt() % 1000) }
     val showTutorial = tutorialStep < 2
     if (showTutorial){
         DialogTutorial(tutorialStep, onChange = {
             tutorialStep++
-            savePreference(context, "tutorial", tutorialStep.toFloat())
-        })
+            savePreference(context, "tutorialMain", tutorialStep.toFloat())
+        }, 0)
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
