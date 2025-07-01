@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.collectAsState
 import java.text.DecimalFormat
+import java.time.LocalDate
+import java.util.Date
 
 fun getValidatedNumber(text: String): String {
     val textSinComa = text.replace(",", ".")
@@ -38,6 +40,11 @@ fun savePreference(context: Context, key: String, value: Float) {
     val editor: SharedPreferences.Editor = sharedPreferences.edit()
     editor.putFloat(key, value)
     editor.apply()
+}
+
+fun getDiaSemana(anno: Int, mes: Int, dia: Int): Int {
+    val fecha = LocalDate.of(anno, mes, dia)
+    return fecha.dayOfWeek.value // 1 = Lunes, 7 = Domingo
 }
 
 fun getPreference(context: Context, key: String): Float {

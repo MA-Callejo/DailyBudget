@@ -163,8 +163,7 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        text = stringResource(com.kiwi.finanzas.R.string.gasto_mensual),
-                        color = Color.White
+                        text = stringResource(com.kiwi.finanzas.R.string.gasto_mensual)
                     )
                     val textFieldValue = remember(text) {
                         TextFieldValue(
@@ -197,7 +196,6 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                     )
                     Text(
                         text = "€",
-                        color = Color.White,
                         style = TextStyle(fontSize = 24.sp),
                         modifier = Modifier.padding(5.dp, 0.dp, 20.dp, 0.dp)
                     )
@@ -210,7 +208,6 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                     )
                     Text(
                         text = stringResource(com.kiwi.finanzas.R.string.mostrar_eliminados),
-                        color = Color.White,
                         modifier = Modifier.padding(5.dp, 0.dp)
                     )
                     Switch(checked = completos, onCheckedChange = {

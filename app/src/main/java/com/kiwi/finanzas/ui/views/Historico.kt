@@ -10,6 +10,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -86,9 +87,11 @@ import com.kiwi.finanzas.db.Agrupado
 import com.kiwi.finanzas.db.Entrada
 import com.kiwi.finanzas.db.EntradaDAO
 import com.kiwi.finanzas.db.TipoDAO
+import com.kiwi.finanzas.getDiaSemana
 import com.kiwi.finanzas.getPreference
 import com.kiwi.finanzas.getPresupuesto
 import com.kiwi.finanzas.isLeapYear
+import com.kiwi.finanzas.savePreference
 import com.kiwi.finanzas.textoGraficas
 import com.kiwi.finanzas.ui.theme.myGreen
 import com.kiwi.finanzas.ui.theme.myRed
@@ -105,7 +108,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     val tipos by daoTipos.getAll().collectAsState(initial = null)
     var showDetalles by remember { mutableStateOf(false) }
     var showEdit by remember { mutableStateOf(false) }
-    var showCharts by remember { mutableStateOf(true) }
+    var showCharts by remember { mutableStateOf(getPreference(context, "Charts") >= 1f) }
     var annoAct by remember { mutableStateOf(anno) }
     var mesAct by remember { mutableStateOf(mes) }
     var diaAct by remember { mutableStateOf(dia) }
@@ -281,7 +284,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                             contentDescription = "",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -304,11 +307,12 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 if(diaAct == null) {
                     IconButton(onClick = {
                         showCharts = !showCharts
+                        savePreference(context, "Charts", if(showCharts) 1f else 0f)
                     }) {
                         Icon(
                             painterResource(if (showCharts) R.drawable.bar_chart_off_24px else R.drawable.bar_chart_24px),
                             contentDescription = "",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -318,7 +322,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                     Icon(
                         painterResource(R.drawable.archive_24px),
                         contentDescription = "",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -395,63 +399,173 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                 detallesConsulta = det
                             })
                     }
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        if(agrupados != null) {
-                            items(agrupados!!.filter { ag -> ag.second.isNotEmpty() }.sortedBy { ag -> ag.first } .chunked(2)) { agrupadosDos ->
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    agrupadosDos.forEach { agrupados ->
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .padding(8.dp)
-                                        ) {
-                                            ItemView(
-                                                agrupados = agrupados.second,
-                                                titulo = if (mesAct != null)
-                                                    context.getString(R.string.dia)+"${agrupados.first}"
+                    if(annoAct != null && mesAct != null && diaAct == null){
+                        val newAgrupados = List(getDiaSemana(annoAct!!, mesAct!!, 1)-1){Pair(0, listOf<Agrupado>())} +
+                                agrupados!!.sortedBy { ag -> ag.first } +
+                                List(7-((agrupados!!.size + getDiaSemana(annoAct!!, mesAct!!, 1)-1)%7)){Pair(0, listOf<Agrupado>())}
+                        LazyColumn(modifier = Modifier.fillMaxSize()){
+                            item{
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly) {
+                                    Text("L")
+                                    Text("M")
+                                    Text("X")
+                                    Text("J")
+                                    Text("V")
+                                    Text("S")
+                                    Text("D")
+                                }
+                            }
+                            items(newAgrupados.chunked(7)){ diasMes ->
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly){
+                                    diasMes.forEachIndexed { diaSem, dm ->
+                                        Box(modifier = Modifier
+                                            .weight(1f)
+                                            .padding(8.dp)){
+                                            if(dm.first != 0){
+                                                ItemView(
+                                                    agrupados = dm.second,
+                                                    titulo = if (mesAct != null)
+                                                        context.getString(R.string.dia) + " ${dm.first}"
                                                     else if (annoAct != null)
-                                                        Month.of(agrupados.first).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0))
+                                                        Month.of(dm.first).getDisplayName(
+                                                            java.time.format.TextStyle.SHORT_STANDALONE,
+                                                            context.resources.configuration.getLocales()
+                                                                .get(0)
+                                                        )
+                                                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                                                     else
-                                                    context.getString(R.string.year)+"${agrupados.first}",
-                                                presupuesto = if (mesAct != null) presupuesto / Month.of(
-                                                    mesAct!!
-                                                ).length(
-                                                    isLeapYear(annoAct!!)
-                                                ) else if (annoAct != null) presupuesto else presupuesto * 12f,
-                                                onDetalles = {
-                                                    if (agrupados.second.isNotEmpty()) {
-                                                        showDetalles = true
-                                                        detallesConsulta =
-                                                            agrupados
-                                                    }
-                                                },
-                                                onEnter = {
-                                                    if (mesAct != null) {
-                                                        changeFecha(annoAct, mesAct, agrupados.first)
-                                                    } else {
-                                                        if (annoAct != null) {
-                                                            changeFecha(annoAct, agrupados.first, null)
-                                                        } else {
-                                                            changeFecha(agrupados.first, null, null)
+                                                        context.getString(R.string.year) + " ${dm.first}",
+                                                    presupuesto = if (mesAct != null) presupuesto / Month.of(
+                                                        mesAct!!
+                                                    ).length(
+                                                        isLeapYear(annoAct!!)
+                                                    ) else if (annoAct != null) presupuesto else presupuesto * 12f,
+                                                    onDetalles = {
+                                                        if (dm.second.isNotEmpty()) {
+                                                            showDetalles = true
+                                                            detallesConsulta =
+                                                                dm
                                                         }
-                                                    }
-                                                },
-                                                recortar = if (annoAct == null && primeraEntrada != null) {
-                                                    if(agrupados.first == primeraEntrada!!.anno){
-                                                        (primeraEntrada!!.mes - 1)*presupuesto
-                                                    }else{
+                                                    },
+                                                    onEnter = {
+                                                        if (mesAct != null) {
+                                                            changeFecha(
+                                                                annoAct,
+                                                                mesAct,
+                                                                dm.first
+                                                            )
+                                                        } else {
+                                                            if (annoAct != null) {
+                                                                changeFecha(
+                                                                    annoAct,
+                                                                    dm.first,
+                                                                    null
+                                                                )
+                                                            } else {
+                                                                changeFecha(
+                                                                    dm.first,
+                                                                    null,
+                                                                    null
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    recortar = if (annoAct == null && primeraEntrada != null) {
+                                                        if (dm.first == primeraEntrada!!.anno) {
+                                                            (primeraEntrada!!.mes - 1) * presupuesto
+                                                        } else {
+                                                            0f
+                                                        }
+                                                    } else {
                                                         0f
                                                     }
-                                                } else {
-                                                    0f
-                                                })
+                                                )
+                                            }
                                         }
-                                        if (agrupadosDos.size == 1) {
+                                    }
+                                }
+                            }
+                        }
+                    }else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            if (agrupados != null) {
+                                items(agrupados!!.sortedBy { ag -> ag.first }
+                                    .chunked(3)) { agrupadosDos ->
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        agrupadosDos.forEach { agrupados ->
                                             Box(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .padding(8.dp)
-                                            ) { /* Empty Box to fill the space */ }
+                                            ) {
+                                                ItemView(
+                                                    agrupados = agrupados.second,
+                                                    titulo = if (mesAct != null)
+                                                        context.getString(R.string.dia) + " ${agrupados.first}"
+                                                    else if (annoAct != null)
+                                                        Month.of(agrupados.first).getDisplayName(
+                                                            java.time.format.TextStyle.SHORT_STANDALONE,
+                                                            context.resources.configuration.getLocales()
+                                                                .get(0)
+                                                        )
+                                                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                                                    else
+                                                        context.getString(R.string.year) + " ${agrupados.first}",
+                                                    presupuesto = if (mesAct != null) presupuesto / Month.of(
+                                                        mesAct!!
+                                                    ).length(
+                                                        isLeapYear(annoAct!!)
+                                                    ) else if (annoAct != null) presupuesto else presupuesto * 12f,
+                                                    onDetalles = {
+                                                        if (agrupados.second.isNotEmpty()) {
+                                                            showDetalles = true
+                                                            detallesConsulta =
+                                                                agrupados
+                                                        }
+                                                    },
+                                                    onEnter = {
+                                                        if (mesAct != null) {
+                                                            changeFecha(
+                                                                annoAct,
+                                                                mesAct,
+                                                                agrupados.first
+                                                            )
+                                                        } else {
+                                                            if (annoAct != null) {
+                                                                changeFecha(
+                                                                    annoAct,
+                                                                    agrupados.first,
+                                                                    null
+                                                                )
+                                                            } else {
+                                                                changeFecha(
+                                                                    agrupados.first,
+                                                                    null,
+                                                                    null
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    recortar = if (annoAct == null && primeraEntrada != null) {
+                                                        if (agrupados.first == primeraEntrada!!.anno) {
+                                                            (primeraEntrada!!.mes - 1) * presupuesto
+                                                        } else {
+                                                            0f
+                                                        }
+                                                    } else {
+                                                        0f
+                                                    }
+                                                )
+                                            }
+                                            for (i in 0 until (3 - agrupadosDos.size)) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .padding(8.dp)
+                                                ) { /* Empty Box to fill the space */ }
+                                            }
                                         }
                                     }
                                 }
@@ -495,12 +609,14 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
                 }
             }
         }) {
+        val lineasColor = MaterialTheme.colorScheme.onBackground
+        val fondoColor = MaterialTheme.colorScheme.background
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawnRects.clear()
             val height = this.size.height - 50f
             val width = this.size.width - 100f
             val maximo =
-                max(presupuesto, agrupados.maxOf { ag -> ag.second.sumOf { ags -> ags.total } })
+                max(presupuesto, if(agrupados.isNotEmpty()) agrupados.maxOf { ag -> ag.second.sumOf { ags -> ags.total } } else 0.0)
             val factorHeight = height / maximo
             val minimoId = agrupados.minOfOrNull { ag -> ag.first }
             val maximoId = agrupados.maxOfOrNull { ag -> ag.first }
@@ -514,7 +630,7 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
             }
             for (i in 1..10) {
                 drawLine(
-                    Color.White.copy(alpha = 0.5f),
+                    lineasColor.copy(alpha = 0.5f),
                     Offset(100f, height - (((maximo * i) / 10) * factorHeight).toFloat()),
                     Offset(
                         this.size.width,
@@ -527,7 +643,7 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
                     text = textoGraficas((maximo.toFloat() * i) / 10),
                     style = TextStyle(
                         fontSize = 10.sp,
-                        color = Color.White
+                        color = lineasColor
                     ),
                     topLeft = Offset(
                         x = 0f,
@@ -547,7 +663,7 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
                 style = TextStyle(
                     fontSize = 10.sp,
                     color = myGreen,
-                    background = Color.Black
+                    background = fondoColor
                 ),
                 topLeft = Offset(
                     x = 0f,
@@ -575,7 +691,7 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
                         text = if (ind < 100) DecimalFormat("00").format(ind) else "$ind",
                         style = TextStyle(
                             fontSize = if (entradasCant > 20) 6.sp else 12.sp,
-                            color = Color.White
+                            color = lineasColor
                         ),
                         topLeft = Offset(
                             x = if (ind < 100) ((index * 2) + 1) * factorWidth + 100f else ((index * 2) + 1.3f) * factorWidth + 100f,
@@ -585,12 +701,12 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
                 }
             }
             drawLine(
-                Color.White,
+                lineasColor,
                 Offset(100f, height),
                 Offset(this.size.width, height),
                 strokeWidth = 5f
             )
-            drawLine(Color.White, Offset(100f, 0f), Offset(100f, height), strokeWidth = 5f)
+            drawLine(lineasColor, Offset(100f, 0f), Offset(100f, height), strokeWidth = 5f)
         }
     }
 }
@@ -599,26 +715,31 @@ fun graficas(agrupados: List<Pair<Int, List<Agrupado>>>, entradasCant: Int=0, pr
 fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDetalles: ()-> Unit, onEnter: () -> Unit, recortar: Float){
     val totalCoste = agrupados.sumOf { ag -> ag.total }
     var inicio = 90f
-    OutlinedCard(onClick = { onEnter() }, border = BorderStroke(1.dp, if(totalCoste > presupuesto) myRed else Color.White)) {
+    OutlinedCard(onClick = { onEnter() }, border = BorderStroke(1.dp, if(totalCoste > presupuesto) myRed else MaterialTheme.colorScheme.onBackground)) {
         Column(modifier = Modifier
             .padding(10.dp)
             .fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
             Text(text = titulo,
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(10.dp, 5.dp),
                 style = TextStyle(
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
-                ))
+                ),
+                textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(10.dp))
             Canvas(
                 modifier = Modifier
-                    .width(100.dp)
-                    .height(100.dp)
+                    .width(80.dp)
+                    .height(80.dp)
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onTap = {
+                            onLongPress = {
                                 onDetalles()
+                            },
+                            onTap = {
+                                onEnter()
                             }
                         )
                     }

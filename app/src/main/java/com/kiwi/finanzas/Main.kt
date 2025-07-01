@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,8 +27,11 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode.Companion.Screen
 import androidx.compose.ui.graphics.Color
@@ -42,6 +46,7 @@ import androidx.navigation.createGraph
 import com.kiwi.finanzas.db.DataBase
 import com.kiwi.finanzas.ui.NavigationItem
 import com.kiwi.finanzas.ui.theme.FinanzasTheme
+import com.kiwi.finanzas.ui.views.DialogTutorial
 import com.kiwi.finanzas.ui.views.Historico
 import com.kiwi.finanzas.ui.views.Home
 import com.kiwi.finanzas.ui.views.Settings
@@ -90,11 +95,20 @@ fun Greeting(context: Context) {
     val selectedNavigationIndex = rememberSaveable {
         mutableIntStateOf(0)
     }
+    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorial").toInt() % 1000) }
+    val showTutorial = tutorialStep < 2
+    if (showTutorial){
+        DialogTutorial(tutorialStep, onChange = {
+            tutorialStep++
+            savePreference(context, "tutorial", tutorialStep.toFloat())
+        })
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             NavigationBar(
-                containerColor = Color.DarkGray
+                containerColor = MaterialTheme.colorScheme.surface,
+                modifier = if(tutorialStep != 1) Modifier else Modifier.border(10.dp, MaterialTheme.colorScheme.tertiary)
             ) {
                 navigationItems.forEachIndexed { index, item ->
                     NavigationBarItem(
@@ -109,7 +123,7 @@ fun Greeting(context: Context) {
                             Text(
                                 item.title,
                                 color = if (index == selectedNavigationIndex.intValue)
-                                    Color.White
+                                    MaterialTheme.colorScheme.onBackground
                                 else Color.Gray
                             )
                         },
@@ -122,19 +136,32 @@ fun Greeting(context: Context) {
             }
         }
     ) { innerPadding ->
-        when(selectedNavigationIndex.intValue){
-            1 -> {
-                Historico(anno, mes, dia, daoEntradas, daoTipos, context, {annoNew, mesNew, diaNew ->
-                    anno = annoNew
-                    mes = mesNew
-                    dia = diaNew
-                }, Modifier.padding(innerPadding))
-            }
-            2 -> {
-                Settings(daoTipos, context, Modifier.padding(innerPadding))
-            }
-            else -> {
-                Home(daoEntradas, daoTipos, context, Modifier.padding(innerPadding))
+        if(!showTutorial) {
+            when (selectedNavigationIndex.intValue) {
+                1 -> {
+                    Historico(
+                        anno,
+                        mes,
+                        dia,
+                        daoEntradas,
+                        daoTipos,
+                        context,
+                        { annoNew, mesNew, diaNew ->
+                            anno = annoNew
+                            mes = mesNew
+                            dia = diaNew
+                        },
+                        Modifier.padding(innerPadding)
+                    )
+                }
+
+                2 -> {
+                    Settings(daoTipos, context, Modifier.padding(innerPadding))
+                }
+
+                else -> {
+                    Home(daoEntradas, daoTipos, context, Modifier.padding(innerPadding))
+                }
             }
         }
     }
