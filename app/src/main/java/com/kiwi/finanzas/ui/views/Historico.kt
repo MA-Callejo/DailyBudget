@@ -101,6 +101,7 @@ import java.time.LocalDateTime
 import java.time.Month
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 
 @Composable
@@ -291,7 +292,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 Column(modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)) {
-                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0))}${if (diaAct != null) "/$diaAct" else ""}" else ""}" else stringResource(R.string.todos),
+                    Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/ ${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0)).replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}${if (diaAct != null) "/ "+stringResource(R.string.dia)+" $diaAct" else ""}" else ""}" else stringResource(R.string.todos),
                         textAlign = TextAlign.Center,
                         style = TextStyle(
                             fontSize = 26.sp,
@@ -406,14 +407,14 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                         LazyColumn(modifier = Modifier.fillMaxSize()){
                             item{
                                 Row(modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly) {
-                                    Text("L")
-                                    Text("M")
-                                    Text("X")
-                                    Text("J")
-                                    Text("V")
-                                    Text("S")
-                                    Text("D")
+                                    horizontalArrangement = Arrangement.SpaceAround) {
+                                    Text(stringResource(R.string.lunes))
+                                    Text(stringResource(R.string.martes))
+                                    Text(stringResource(R.string.miercoles))
+                                    Text(stringResource(R.string.jueves))
+                                    Text(stringResource(R.string.viernes))
+                                    Text(stringResource(R.string.sabado))
+                                    Text(stringResource(R.string.domingo))
                                 }
                             }
                             items(newAgrupados.chunked(7)){ diasMes ->
@@ -421,22 +422,11 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                     horizontalArrangement = Arrangement.SpaceEvenly){
                                     diasMes.forEachIndexed { diaSem, dm ->
                                         Box(modifier = Modifier
-                                            .weight(1f)
-                                            .padding(8.dp)){
+                                            .weight(1f)){
                                             if(dm.first != 0){
-                                                ItemView(
+                                                DiaView(
                                                     agrupados = dm.second,
-                                                    titulo = if (mesAct != null)
-                                                        context.getString(R.string.dia) + " ${dm.first}"
-                                                    else if (annoAct != null)
-                                                        Month.of(dm.first).getDisplayName(
-                                                            java.time.format.TextStyle.SHORT_STANDALONE,
-                                                            context.resources.configuration.getLocales()
-                                                                .get(0)
-                                                        )
-                                                            .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                                                    else
-                                                        context.getString(R.string.year) + " ${dm.first}",
+                                                    titulo = "${dm.first}",
                                                     presupuesto = if (mesAct != null) presupuesto / Month.of(
                                                         mesAct!!
                                                     ).length(
@@ -471,15 +461,6 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                                                                 )
                                                             }
                                                         }
-                                                    },
-                                                    recortar = if (annoAct == null && primeraEntrada != null) {
-                                                        if (dm.first == primeraEntrada!!.anno) {
-                                                            (primeraEntrada!!.mes - 1) * presupuesto
-                                                        } else {
-                                                            0f
-                                                        }
-                                                    } else {
-                                                        0f
                                                     }
                                                 )
                                             }
@@ -748,7 +729,7 @@ fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDe
                 agrupados.filter { it2 -> it2.total > 0 }
                     .forEach {
                         val fin =
-                            ((it.total / totalCoste) * 360f).toFloat()
+                            ((it.total / max(totalCoste, presupuesto.toDouble())) * 360f).toFloat()
                         drawArc(
                             it.color(),
                             -1f * inicio,
@@ -765,6 +746,65 @@ fun ItemView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDe
             Text(text=if(totalCoste > (presupuesto-recortar)) DecimalFormat("0.00€").format((presupuesto-recortar) - totalCoste) else "+${DecimalFormat("0.00€").format((presupuesto-recortar) - totalCoste)}", modifier = Modifier
                 .fillMaxWidth(), textAlign = TextAlign.Center,
                 color = if(totalCoste > (presupuesto-recortar)) myRed else myGreen)
+        }
+    }
+}
+
+@Composable
+fun DiaView(titulo: String, agrupados: List<Agrupado>, presupuesto: Float, onDetalles: ()-> Unit, onEnter: () -> Unit){
+    val totalCoste = agrupados.sumOf { ag -> ag.total }
+    var inicio = 90f
+    OutlinedCard(onClick = { onEnter() } , shape = RoundedCornerShape(0.dp), border = BorderStroke(1.dp, if(totalCoste > presupuesto) myRed else MaterialTheme.colorScheme.onBackground)) {
+        Column(modifier = Modifier
+            .padding(1.dp)
+            .fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
+            Box(){
+                Canvas(modifier = Modifier
+                    .padding(top = 5.dp)
+                    .width(40.dp)
+                    .height(40.dp)
+                    .align(Alignment.Center)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = {
+                                onDetalles()
+                            },
+                            onTap = {
+                                onEnter()
+                            }
+                        )
+                    })
+                {
+                    drawArc(Color.Gray, 0f, 360f, true)
+                    agrupados.filter { it2 -> it2.total > 0 }
+                        .forEach {
+                            val fin =
+                                ((it.total / max(totalCoste, presupuesto.toDouble())) * 360f).toFloat()
+                            drawArc(
+                                it.color(),
+                                -1f * inicio,
+                                -1f * fin,
+                                true
+                            )
+                            inicio += fin
+                        }
+                }
+                Text(
+                    text = titulo,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                )
+            }
+            Text(text=if(totalCoste>=100f) DecimalFormat("0€").format(totalCoste.roundToInt()) else DecimalFormat("0.00€").format(totalCoste),
+                modifier = Modifier
+                    .padding(0.dp, 0.dp, 0.dp, 5.dp)
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = if(totalCoste <= presupuesto) TextStyle(fontWeight = FontWeight.Normal) else TextStyle(fontWeight = FontWeight.Normal, color = myRed)
+            )
         }
     }
 }

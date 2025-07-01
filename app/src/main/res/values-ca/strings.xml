@@ -18,4 +18,11 @@
     <string name="nombre">Nom</string>
     <string name="restaurar">Restaurar</string>
     <string name="historic">Històric</string>
+    <string name="lunes">Dl</string>
+    <string name="martes">Dm</string>
+    <string name="miercoles">Dc</string>
+    <string name="jueves">Dj</string>
+    <string name="viernes">Dv</string>
+    <string name="sabado">Ds</string>
+    <string name="domingo">Dg</string>
 </resources>
