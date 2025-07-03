@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,6 +123,8 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     var scope = rememberCoroutineScope()
     val presupuesto = getPresupuesto(context)
     var primeraEntrada by remember { mutableStateOf<Entrada?>(null) }
+    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorialHistorico").toInt() % 1000) }
+    val showTutorial = tutorialStep < 4
     val createFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         uri?.let {
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
@@ -265,6 +269,12 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
         }
     }
     if(tipos != null && (entradas != null || agrupados != null)){
+        if (showTutorial){
+            DialogTutorial(tutorialStep, onChange = {
+                tutorialStep++
+                savePreference(context, "tutorialHistorico", tutorialStep.toFloat())
+            }, 2)
+        }
         Scaffold(modifier = modifier.blur(if (showDetalles || showEdit) 16.dp else 0.dp), topBar = {
             Row(modifier = Modifier
                 .fillMaxWidth()
@@ -291,7 +301,13 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 }
                 Column(modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)) {
+                    .weight(1f).let {
+                        if(tutorialStep == 1){
+                            it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                        }else{
+                            it
+                        }
+                    }) {
                     Text(if (annoAct != null) "$annoAct${if (mesAct != null) "/ ${Month.of(mesAct!!).getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,context.resources.configuration.getLocales().get(0)).replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}${if (diaAct != null) "/ "+stringResource(R.string.dia)+" $diaAct" else ""}" else ""}" else stringResource(R.string.todos),
                         textAlign = TextAlign.Center,
                         style = TextStyle(
@@ -309,6 +325,12 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                     IconButton(onClick = {
                         showCharts = !showCharts
                         savePreference(context, "Charts", if(showCharts) 1f else 0f)
+                    }, modifier=Modifier.let {
+                        if(tutorialStep == 2){
+                            it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                        }else{
+                            it
+                        }
                     }) {
                         Icon(
                             painterResource(if (showCharts) R.drawable.bar_chart_off_24px else R.drawable.bar_chart_24px),
@@ -319,6 +341,12 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
                 }
                 IconButton(onClick = {
                     createFileLauncher.launch("Registro${if (annoAct != null) "_$annoAct${if (mesAct != null) "_$mesAct${if (diaAct != null) "_$diaAct" else ""}" else ""}" else ""}.csv")
+                }, modifier = Modifier.let {
+                    if(tutorialStep == 3){
+                        it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
+                    }else{
+                        it
+                    }
                 }) {
                     Icon(
                         painterResource(R.drawable.archive_24px),

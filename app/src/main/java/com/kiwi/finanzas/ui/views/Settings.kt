@@ -16,6 +16,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -117,10 +119,16 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
     var tipoSelected: Tipo? by remember { mutableStateOf(null) }
     var selector by remember { mutableStateOf(false) }
     var completos by remember { mutableStateOf(false) }
-    var expandedDay by remember { mutableStateOf(false)}
-    var periodo by remember { mutableFloatStateOf(if(getPreference(context,"periodo") >= 0f) getPreference(context,"periodo") else 1f) }
     val coroutineScope = rememberCoroutineScope()
+    var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorialSettings").toInt() % 1000) }
+    val showTutorial = tutorialStep < 2
     if(tiposNull != null) {
+        if (showTutorial){
+            DialogTutorial(tutorialStep, onChange = {
+                tutorialStep++
+                savePreference(context, "tutorialSettings", tutorialStep.toFloat())
+            }, 3)
+        }
         val tipos = tiposNull!!
         if (selector) {
             CustomDialog(
@@ -156,7 +164,16 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                     .fillMaxWidth()
                     .padding(20.dp, 50.dp, 20.dp, 20.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.let {
+                        if (tutorialStep == 0) {
+                            it
+                                .border(10.dp, MaterialTheme.colorScheme.tertiary)
+                                .padding(10.dp)
+                        } else {
+                            it
+                        }
+                    }) {
                     Text(
                         textAlign = TextAlign.Center,
                         style = TextStyle(fontSize = 24.sp),
@@ -217,7 +234,16 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                 OutlinedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(0.dp, 20.dp),
+                        .padding(0.dp, 20.dp)
+                        .let {
+                            if (tutorialStep == 1) {
+                                it
+                                    .border(10.dp, MaterialTheme.colorScheme.tertiary)
+                                    .padding(10.dp)
+                            } else {
+                                it
+                            }
+                        },
                 ) {
                     LazyColumn {
                         items(tipos.filter { t -> t.disponible == 1 || completos }) {

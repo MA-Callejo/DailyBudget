@@ -222,9 +222,11 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                             .fillMaxWidth()
                             .weight(1f)
                             .let {
-                                if(tutorialStep == 2){
-                                    it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
-                                }else{
+                                if (tutorialStep == 2) {
+                                    it
+                                        .border(10.dp, MaterialTheme.colorScheme.tertiary)
+                                        .padding(10.dp)
+                                } else {
                                     it
                                 }
                             }) {
@@ -263,9 +265,11 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                         .fillMaxWidth()
                         .weight(1f)
                         .let {
-                            if(tutorialStep == 0){
-                                it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
-                            }else{
+                            if (tutorialStep == 0) {
+                                it
+                                    .border(10.dp, MaterialTheme.colorScheme.tertiary)
+                                    .padding(10.dp)
+                            } else {
                                 it
                             }
                         }) {
@@ -301,9 +305,11 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                                     .fillMaxWidth()
                                     .padding(10.dp, 3.dp)
                                     .let {
-                                        if(tutorialStep == 3){
-                                            it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
-                                        }else{
+                                        if (tutorialStep == 3) {
+                                            it
+                                                .border(10.dp, MaterialTheme.colorScheme.tertiary)
+                                                .padding(10.dp)
+                                        } else {
                                             it
                                         }
                                     },
@@ -350,13 +356,17 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                     IconButton({
                         addNew = true
                     }, modifier =
-                        Modifier.align(Alignment.BottomEnd).let {
-                            if(tutorialStep == 1){
-                                it.border(10.dp, MaterialTheme.colorScheme.tertiary).padding(10.dp)
-                            }else{
-                                it
-                            }
-                        }) {
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .let {
+                                if (tutorialStep == 1) {
+                                    it
+                                        .border(10.dp, MaterialTheme.colorScheme.tertiary)
+                                        .padding(10.dp)
+                                } else {
+                                    it
+                                }
+                            }) {
                         Icon(
                             Icons.Default.AddCircle,
                             contentDescription = "",
@@ -385,21 +395,33 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
 fun DialogTutorial(tutorialStep: Int, onChange: () -> Unit, tipo: Int) { //0: Main, 1: Home, 2: Historic, 3: Settings
     val indice = (10*tipo) + tutorialStep
     val titulo = when(indice){
-        0 -> "Saludos"
-        1 -> "Navegación"
-        10 -> "Gasto total"
-        11 -> "Añadir gasto"
-        12 -> "Desglose de gastos"
-        13 -> "Entradas de datos"
+        0 -> stringResource(R.string.saludos)
+        1 -> stringResource(R.string.navegacion)
+        10 -> stringResource(R.string.gasto_total)
+        11 -> stringResource(R.string.anadir_gasto)
+        12 -> stringResource(R.string.desglose_de_gastos)
+        13 -> stringResource(R.string.entradas_de_datos)
+        20 -> stringResource(R.string.historico)
+        21 -> stringResource(R.string.fecha_de_consulta)
+        22 -> stringResource(R.string.mostrar_ocultar_grafica)
+        23 -> stringResource(R.string.exportar_a_excel)
+        30 -> stringResource(R.string.gasto_mensual_tutorial)
+        31 -> stringResource(R.string.tipos_de_gasto)
         else -> ""
     }
     val texto = when(indice){
-        0 -> "Esta es la pantalla de inicio de DailyBudget.\nAquí podras ver rapidamente los gastos de este mes así como el total de ellos."
-        1 -> "En la parte inferior de la pantalla encontraras un menu de navegacion con el que podras ir al historico de gastos y a la configuracion de la app."
-        10 -> "Aqui sale el presupuesto que aun puedes gastar este mes.\nPuedes cambiarlo en la ventana de ajustes."
-        11 -> "En la esquina inferior encontraras el boton para añadir nuevos gastos. Recuerda hacerlo cada vez que pagues algo."
-        12 -> "Aqui sale el gasto de este mes agrupado por tipo.\nPuedes gestionar estos tipos en la ventana de ajustes."
-        13 -> "Estas son las entradas de gastos. Reflejan cada movimiento que has realizado.\nPuedes pulsar sobre una entrada de gasto para borrarla o modificarla."
+        0 -> stringResource(R.string.saludos_t)
+        1 -> stringResource(R.string.navegacion_t)
+        10 -> stringResource(R.string.gasto_total_t)
+        11 -> stringResource(R.string.anadir_gasto_t)
+        12 -> stringResource(R.string.desglose_de_gasto_t)
+        13 -> stringResource(R.string.entradas_t)
+        20 -> stringResource(R.string.historico_t)
+        21 -> stringResource(R.string.fecha_consulta_t)
+        22 -> stringResource(R.string.mostrar_ocultar_Graficas_t)
+        23 -> stringResource(R.string.exportar_excel_t)
+        30 -> stringResource(R.string.gasto_mensual_t)
+        31 -> stringResource(R.string.tipos_gastos_t)
         else -> ""
     }
     AlertDialog(confirmButton = {
