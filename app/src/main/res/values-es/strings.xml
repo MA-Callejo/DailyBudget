@@ -50,4 +50,10 @@
     <string name="exportar_excel_t">Con el botón resaltado en la esquina superior derecha de la pantlla podras exportar los datos que estas consultando a formato CSV.</string>
     <string name="gasto_mensual_t">Aquí podrás establecer tu presupuesto mensual.\\nEste es el presupuesto sobre el cual se calcularán los gastos y los ahorros.</string>
     <string name="tipos_gastos_t">En la parte central de la pantalla están los tipos de gastos.\\nHay unas sugerencias establecidas pero siéntete libre de cambiarlos o añadir otros nuevos si lo necesitas para que se adapte perfectamente a ti.</string>
+    <string name="lloguer">Alquiler</string>
+    <string name="supermercat">Supermercado</string>
+    <string name="F">Transportes</string>
+    <string name="mascotes">Mascotas</string>
+    <string name="oci">Ocio</string>
+    <string name="restaurants">Restaurantes</string>
 </resources>

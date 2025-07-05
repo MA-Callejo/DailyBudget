@@ -50,4 +50,10 @@
     <string name="exportar_excel_t">Amb el botó ressaltat a la cantonada superior dreta de la pantalla podràs exportar les dades que estàs consultant a format CSV.</string>
     <string name="gasto_mensual_t">Aquí podreu establir el vostre pressupost mensual.\\nAquest és el pressupost sobre el qual es calcularan les despeses i els estalvis.</string>
     <string name="tipos_gastos_t">A la part central de la pantalla hi ha els tipus de despeses.\\nHi ha uns suggeriments establerts però sent-te lliure de canviar-los o afegir-ne de nous si ho necessites perquè s\'adapti perfectament a tu.</string>
+    <string name="lloguer">Loguer</string>
+    <string name="supermercat">Supermercat</string>
+    <string name="F">Transport</string>
+    <string name="mascotes">Mascotes</string>
+    <string name="oci">Oci</string>
+    <string name="restaurants">Restaurants</string>
 </resources>

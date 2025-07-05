@@ -530,7 +530,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
         context,
         { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
             year = selectedYear
-            month = selectedMonth
+            month = selectedMonth + 1
             day = selectedDay
         }, year, month, day
     )

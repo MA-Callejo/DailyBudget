@@ -50,4 +50,10 @@
     <string name="exportar_excel_t">With the highlighted button in the upper right corner of the screen, you can export the data you are querying to CSV format.</string>
     <string name="gasto_mensual_t">Here you can establish your monthly budget.\\nThis is the budget on which expenses and savings will be calculated.</string>
     <string name="tipos_gastos_t">In the middle of the screen are the expense types. There are some established suggestions, but feel free to change them or add new ones if you need to make it fit you perfectly.</string>
+    <string name="lloguer">Rent</string>
+    <string name="supermercat">Supermarket</string>
+    <string name="F">Transport</string>
+    <string name="mascotes">Pets</string>
+    <string name="oci">Leisure</string>
+    <string name="restaurants">Restorants</string>
 </resources>
