@@ -124,13 +124,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
     }
     fun reloadEntradas(){
         scope.launch {
-            gastosNull = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, gastosNull?.size ?: 10, 0)
-        }
-    }
-    fun addSingle(){
-        scope.launch {
-            val entrada = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, 1, 0)
-            gastosNull = entrada.plus(gastosNull ?: listOf())
+            gastosNull = daoEntradas.getMesHome(currentTime.monthValue, currentTime.year, 10, 0)
         }
     }
     val agrupadosPeriodo by daoEntradas.getTotalesPeriodo(
@@ -206,7 +200,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
                     coroutineScope.launch {
                         daoEntradas.insert(ent)
                         addNew = false
-                        addSingle()
+                        reloadEntradas()
                     }
                 }, tipos = tipos, entrada = null)
         }
@@ -405,6 +399,7 @@ fun DialogTutorial(tutorialStep: Int, onChange: () -> Unit, tipo: Int) { //0: Ma
         21 -> stringResource(R.string.fecha_de_consulta)
         22 -> stringResource(R.string.mostrar_ocultar_grafica)
         23 -> stringResource(R.string.exportar_a_excel)
+        24 -> stringResource(R.string.agruapar_por_concepto)
         30 -> stringResource(R.string.gasto_mensual_tutorial)
         31 -> stringResource(R.string.tipos_de_gasto)
         else -> ""
@@ -420,6 +415,7 @@ fun DialogTutorial(tutorialStep: Int, onChange: () -> Unit, tipo: Int) { //0: Ma
         21 -> stringResource(R.string.fecha_consulta_t)
         22 -> stringResource(R.string.mostrar_ocultar_Graficas_t)
         23 -> stringResource(R.string.exportar_excel_t)
+        24 -> stringResource(R.string.si_mantienes_pulsado_el_circulo_ge_gastos_podras_ver_un_resumen_de_tus_gastos_en_ese_periodo_por_concepto_esto_tambien_funciona_si_pulsas_sobre_alguna_de_las_barras_en_la_grafica_superior)
         30 -> stringResource(R.string.gasto_mensual_t)
         31 -> stringResource(R.string.tipos_gastos_t)
         else -> ""

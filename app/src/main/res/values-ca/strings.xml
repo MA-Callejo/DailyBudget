@@ -44,7 +44,7 @@
     <string name="anadir_gasto_t">A la cantonada inferior trobaràs el botó per afegir noves despeses.\\nRecorda fer-ho cada cop que paguis alguna cosa.</string>
     <string name="desglose_de_gasto_t">Aquí surt la despesa d\'aquest mes agrupada per tipus.\\nPots gestionar aquests tipus a la finestra de configuració.</string>
     <string name="entradas_t">Aquestes són les entrades de despeses. Reflecteixen cada moviment que has realitzat.\\nPots prémer sobre una entrada de despesa per esborrar-la o modificar-la.</string>
-    <string name="historico_t">Aquí pots veure l\'agrupat de les despeses per dia mes o any i si entres en un dia podràs veure tots els moviments que vas fer aquell dia.</string>
+    <string name="historico_t">Aquí pots veure l\'agrupat de les teves despeses per dia mes o any i si entres en un dia podràs veure tots els moviments que vas fer aquell dia.\\nA la gràfica es mostra en verd quin és el teu límit de pressupost per a cada període.</string>
     <string name="fecha_consulta_t">La barra superior mostra el període que estàs consultant i el total gastat en aquest període.</string>
     <string name="mostrar_ocultar_Graficas_t">Amb el botó ressaltat a la cantonada superior dreta de la pantalla podràs mostrar o ocultar la gràfica de despeses.</string>
     <string name="exportar_excel_t">Amb el botó ressaltat a la cantonada superior dreta de la pantalla podràs exportar les dades que estàs consultant a format CSV.</string>
@@ -56,4 +56,6 @@
     <string name="mascotes">Mascotes</string>
     <string name="oci">Oci</string>
     <string name="restaurants">Restaurants</string>
+    <string name="agruapar_por_concepto">Agrupar per concepte</string>
+    <string name="si_mantienes_pulsado_el_circulo_ge_gastos_podras_ver_un_resumen_de_tus_gastos_en_ese_periodo_por_concepto_esto_tambien_funciona_si_pulsas_sobre_alguna_de_las_barras_en_la_grafica_superior">Si mantens premut el cercle de despeses podràs veure un resum de les teves despeses en aquest període per concepte.\\nAixò també funciona si prems sobre alguna de les barres a la gràfica superior.</string>
 </resources>

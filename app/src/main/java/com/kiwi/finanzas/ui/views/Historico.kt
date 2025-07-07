@@ -124,7 +124,7 @@ fun Historico(anno: Int?, mes: Int?, dia: Int?, daoEntradas: EntradaDAO, daoTipo
     val presupuesto = getPresupuesto(context)
     var primeraEntrada by remember { mutableStateOf<Entrada?>(null) }
     var tutorialStep by remember { mutableIntStateOf(getPreference(context, "tutorialHistorico").toInt() % 1000) }
-    val showTutorial = tutorialStep < 4
+    val showTutorial = tutorialStep < 5
     val createFileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         uri?.let {
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->

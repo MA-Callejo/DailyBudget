@@ -44,7 +44,7 @@
     <string name="anadir_gasto_t">En la esquina inferior encontrarás el botón para añadir nuevos gastos.\\nRecuerda hacerlo cada vez que pagues algo.</string>
     <string name="desglose_de_gasto_t">Aqui sale el gasto de este mes agrupado por tipo.\\nPuedes gestionar estos tipos en la ventana de ajustes.</string>
     <string name="entradas_t">Éstas son las entradas de gastos. Reflejan cada movimiento que has realizado.\\nPuedes pulsar sobre una entrada de gasto para borrarlo o modificarlo.</string>
-    <string name="historico_t">Aquí puedes ver el agrupado de tus gastos por dia mes o año y si entras en un dia podras ver todos los movimientos que hiciste ese dia.</string>
+    <string name="historico_t">Aquí puedes ver el agrupado de tus gastos por día mes o año y si entras en un día podrás ver todos los movimientos que hiciste ese día.\\nEn la gráfica se muestra en verde cuál es tu límite de presupuesto para cada período.</string>
     <string name="fecha_consulta_t">La barra superior muestra el periodo que estas consultando y el total gastado en ese periodo.</string>
     <string name="mostrar_ocultar_Graficas_t">Con el botón resaltado en la esquina superior derecha de la pantalla podras mostrar u ocultar la grafica de gastos.</string>
     <string name="exportar_excel_t">Con el botón resaltado en la esquina superior derecha de la pantlla podras exportar los datos que estas consultando a formato CSV.</string>
@@ -56,4 +56,6 @@
     <string name="mascotes">Mascotas</string>
     <string name="oci">Ocio</string>
     <string name="restaurants">Restaurantes</string>
+    <string name="agruapar_por_concepto">Agruapar por concepto</string>
+    <string name="si_mantienes_pulsado_el_circulo_ge_gastos_podras_ver_un_resumen_de_tus_gastos_en_ese_periodo_por_concepto_esto_tambien_funciona_si_pulsas_sobre_alguna_de_las_barras_en_la_grafica_superior">Si mantienes pulsado el círculo de gastos podrás ver un resumen de tus gastos en ese período por concepto.\\nEsto también funciona si pulsas sobre alguna de las barras en la gráfica superior.</string>
 </resources>

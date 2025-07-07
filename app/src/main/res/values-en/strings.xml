@@ -44,7 +44,7 @@
     <string name="anadir_gasto_t">In the bottom corner you will find the button to add new expenses.\\nRemember to do this every time you pay for something.</string>
     <string name="desglose_de_gasto_t">This month\'s spending is grouped by type.\\nYou can manage these types in the settings window.</string>
     <string name="entradas_t">These are your expense entries. They reflect every transaction you\'ve made. You can click on an expense entry to delete or edit it.</string>
-    <string name="historico_t">Here you can see your expenses grouped by day, month, or year, and if you enter a day, you can see all the transactions you made that day.</string>
+    <string name="historico_t">Here you can see your expenses grouped by day, month, or year, and if you go into a day, you\'ll be able to see all the transactions you made that day.\\nThe graph shows your budget limit for each period in green.</string>
     <string name="fecha_consulta_t">The top bar shows the period you are looking at and the total amount spent during that period.</string>
     <string name="mostrar_ocultar_Graficas_t">With the highlighted button in the upper right corner of the screen you can show or hide the expense graph.</string>
     <string name="exportar_excel_t">With the highlighted button in the upper right corner of the screen, you can export the data you are querying to CSV format.</string>
@@ -56,4 +56,6 @@
     <string name="mascotes">Pets</string>
     <string name="oci">Leisure</string>
     <string name="restaurants">Restorants</string>
+    <string name="agruapar_por_concepto">Group by concept</string>
+    <string name="si_mantienes_pulsado_el_circulo_ge_gastos_podras_ver_un_resumen_de_tus_gastos_en_ese_periodo_por_concepto_esto_tambien_funciona_si_pulsas_sobre_alguna_de_las_barras_en_la_grafica_superior">If you long-press the expense circle, you\'ll see a summary of your expenses for that period by item.\\nThis also works if you tap on any of the bars in the chart above.</string>
 </resources>
