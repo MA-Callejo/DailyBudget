@@ -526,9 +526,9 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
         context,
         { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
             year = selectedYear
-            month = selectedMonth + 1
+            month = selectedMonth+1
             day = selectedDay
-        }, year, month, day
+        }, year, month-1, day
     )
     AlertDialog(
         content = {
@@ -637,7 +637,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                             if(entrada != null) {
                                 onEdit(
                                     Entrada(
-                                        concepto = text,
+                                        concepto = text.trim(),
                                         anno = year,
                                         mes = month,
                                         dia = day,
@@ -650,7 +650,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                                 )
                             }else{
                                 onCreate(Entrada(
-                                    concepto = text,
+                                    concepto = text.trim(),
                                     anno = year,
                                     mes = month,
                                     dia = day,
