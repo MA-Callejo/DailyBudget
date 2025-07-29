@@ -146,8 +146,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         val endReached by remember {
             derivedStateOf {
                 val layoutInfo = listState.layoutInfo
-                val lastItemIndex = gastos.lastIndex
-                layoutInfo.visibleItemsInfo.any { it.index == lastItemIndex }
+                layoutInfo.visibleItemsInfo.any { it.index == 0 }
             }
         }
 
