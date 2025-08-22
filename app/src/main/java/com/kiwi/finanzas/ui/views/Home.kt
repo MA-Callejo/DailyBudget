@@ -128,8 +128,8 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         }
     }
     val agrupadosPeriodo by daoEntradas.getTotalesPeriodo(
-        ((currentTime.year-1)*372) + ((currentTime.monthValue - 1)*31),
-        ((currentTime.year-1)*372) + ((currentTime.monthValue)*31),
+        ((currentTime.year)*10000) + ((currentTime.monthValue)*100),
+        ((currentTime.year)*10000) + ((currentTime.monthValue+1)*100),
             ).collectAsState(initial = emptyList())
     if(tiposNull != null && gastosNull != null && agrupadosNull != null) {
         val agrupados = agrupadosNull!!

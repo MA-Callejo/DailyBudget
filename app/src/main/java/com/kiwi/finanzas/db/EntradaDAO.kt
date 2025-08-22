@@ -44,7 +44,7 @@ interface EntradaDAO {
     @Query("SELECT * FROM entradas where (((anno-1)*372) + ((mes-1)*31) + dia) >= :dia")
     fun getGastoPeriodo(dia: Int): Flow<List<Entrada>>
 
-    @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where (((entradas.anno-1)*372) + ((entradas.mes-1)*31) + entradas.dia) >= :dia and (((entradas.anno-1)*372) + ((entradas.mes-1)*31) + entradas.dia) < :dia2 group by tipo order by total desc")
+    @Query("SELECT tipos.id as tipoId, tipos.red, tipos.green, tipos.blue, tipos.nombre, sum(entradas.cantidad) as total from entradas join tipos on (entradas.tipo = tipos.id) where (((entradas.anno)*10000) + ((entradas.mes)*100) + entradas.dia) between :dia and :dia2 group by tipo order by total desc")
     fun getTotalesPeriodo(dia: Int, dia2: Int): Flow<List<Agrupado>>
 
     @Query("SELECT * FROM entradas where mes = :mes and anno = :anno and dia = :dia")
