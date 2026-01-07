@@ -52,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -64,7 +65,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
@@ -245,40 +248,43 @@ fun Settings(daoTipos: TipoDAO, context: Context, modifier: Modifier) {
                             }
                         },
                 ) {
-                    LazyColumn {
-                        items(tipos.filter { t -> t.disponible == 1 || completos }) {
-                            OutlinedCard(
-                                onClick = {
-                                    selector = true
-                                    tipoSelected = it
-                                },
-                                colors = CardDefaults.outlinedCardColors(containerColor = it.color()),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 20.dp, start = 20.dp, bottom = 0.dp, end = 20.dp),
-                            ) {
-                                Text(
-                                    text = it.nombre,
-                                    color = it.textColor(),
+                    Box(modifier = Modifier.fillMaxSize()){
+
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(tipos.filter { t -> t.disponible == 1 || completos }) {
+                                OutlinedCard(
+                                    onClick = {
+                                        selector = true
+                                        tipoSelected = it
+                                    },
+                                    colors = CardDefaults.outlinedCardColors(containerColor = it.color()),
                                     modifier = Modifier
-                                        .padding(10.dp)
-                                        .fillMaxWidth(), textAlign = TextAlign.Center
-                                )
+                                        .fillMaxWidth()
+                                        .padding(top = 20.dp, start = 20.dp, bottom = 0.dp, end = 20.dp),
+                                ) {
+                                    Text(
+                                        text = it.nombre,
+                                        color = it.textColor(),
+                                        modifier = Modifier
+                                            .padding(10.dp)
+                                            .fillMaxWidth(), textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
-                    }
-                    IconButton(modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(end = 5.dp, bottom = 5.dp), onClick = {
-                        tipoSelected = null
-                        selector = true
-                    }) {
-                        Icon(
-                            Icons.Default.AddCircle,
-                            contentDescription = "",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(200.dp)
-                        )
+                        IconButton(modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 15.dp), onClick = {
+                            tipoSelected = null
+                            selector = true
+                        }) {
+                            Icon(
+                                Icons.Default.AddCircle,
+                                contentDescription = "",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(200.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -305,13 +311,18 @@ fun CustomDialog(tipo: Tipo? = null, onDismis: () -> Unit = {}, onOk: (tipo: Tip
     var red by remember { mutableStateOf(selectedColor.red) }
     var green by remember { mutableStateOf(selectedColor.green) }
     var blue by remember { mutableStateOf(selectedColor.blue) }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
     AlertDialog(
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 OutlinedCard {
                     Column(modifier = Modifier.padding(10.dp)) {
                         OutlinedTextField(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                             value = nombre,
                             onValueChange = {
                                 nombre = it

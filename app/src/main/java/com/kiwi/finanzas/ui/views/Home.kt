@@ -69,6 +69,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -146,7 +148,7 @@ fun Home(daoEntradas: EntradaDAO, daoTipos: TipoDAO, context: Context, modifier:
         val endReached by remember {
             derivedStateOf {
                 val layoutInfo = listState.layoutInfo
-                layoutInfo.visibleItemsInfo.any { it.index == 0 }
+                layoutInfo.visibleItemsInfo.any { it.index == (layoutInfo.totalItemsCount - 1) }
             }
         }
 
@@ -520,7 +522,11 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
     var year by remember { mutableIntStateOf(entrada?.anno ?: currentTime.year) }
     var month by remember { mutableIntStateOf(entrada?.mes ?: currentTime.monthValue) }
     var day by remember { mutableIntStateOf(entrada?.dia ?: currentTime.dayOfMonth) }
+    val focusRequester = remember { FocusRequester() }
 
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
     val datePickerDialog = DatePickerDialog(
         context,
         { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
@@ -535,7 +541,7 @@ fun DialogEdit(context: Context, onDismis: () -> Unit = {}, onDelete: (id: Int) 
                 OutlinedCard {
                     Column(modifier = Modifier.padding(10.dp)) {
                         OutlinedTextField(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                             value = text,
                             onValueChange = {
                                 text = it
