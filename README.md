@@ -16,8 +16,7 @@ Este proyecto forma parte de **Kiwi Studio**, una iniciativa personal creada por
 - 🧩 Crear soluciones prácticas a problemas y necesidades reales  
 
 Este repositorio sirve tanto como **producto funcional** como **registro del proceso de desarrollo**.
-
-www.kiwiprojectstudio.com
+🌐 Web oficial: kiwiprojectstudio.com
 
 ---
 
