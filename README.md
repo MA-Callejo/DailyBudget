@@ -17,6 +17,8 @@ Este proyecto forma parte de **Kiwi Studio**, una iniciativa personal creada por
 
 Este repositorio sirve tanto como **producto funcional** como **registro del proceso de desarrollo**.
 
+www.kiwiprojectstudio.com
+
 ---
 
 ## ✨ Características principales
@@ -59,3 +61,4 @@ Este repositorio sirve tanto como **producto funcional** como **registro del pro
 
 ### Instalación
 - Desde la PlayStore de Google
+- Descargando el APK desde la web de Kiwi Project Studio
